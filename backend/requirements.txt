@@ -1,0 +1,11 @@
+flask
+gunicorn
+pymongo[srv]     # MongoDB driver
+python-dotenv
+flask-cors
+werkzeug
+requests
+# Optional: transformers, sentence-transformers, faiss-cpu, torch (if you plan local models)
+# transformers
+# sentence-transformers
+# torch

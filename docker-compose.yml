@@ -1,0 +1,54 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: intellico_frontend
+    restart: unless-stopped
+    ports:
+      - "2600:80"            # Exposes nginx at host:2600
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://backend:2750/api
+    networks:
+      - intellico_net
+    # volumes:
+    #   - ./frontend:/usr/share/nginx/html:ro   # optional for local dev (if you want to override build)
+
+  backend:
+    build:
+      context: ./backend
+    container_name: intellico_backend
+    restart: unless-stopped
+    ports:
+      - "2750:5000"
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - FLOWCHART_API_URL=${FLOWCHART_API_URL}
+      - STORAGE_PATH=/app/storage
+    volumes:
+      - ./backend/storage:/app/storage
+    networks:
+      - intellico_net
+
+  mongo:
+    image: mongo:6.0
+    container_name: intellico_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    networks:
+      - intellico_net
+
+networks:
+  intellico_net:
+    driver: bridge

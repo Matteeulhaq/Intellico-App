@@ -1,0 +1,7 @@
+# Ignore unnecessary stuff
+my-app/node_modules
+my-app/dist
+.git
+Dockerfile
+.dockerignore
+docker-compose.yml
