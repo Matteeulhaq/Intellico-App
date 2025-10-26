@@ -5,7 +5,33 @@ python-dotenv
 flask-cors
 werkzeug
 requests
-# Optional: transformers, sentence-transformers, faiss-cpu, torch (if you plan local models)
-# transformers
-# sentence-transformers
-# torch
+
+# PDF Processing
+PyMuPDF==1.23.8
+pdfplumber==0.10.0
+pypdf2==3.0.1
+
+# Machine Learning & NLP
+transformers==4.35.0
+torch==2.1.0
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+scikit-learn==1.3.2
+numpy==1.24.3
+pandas==2.1.3
+
+# Text Processing
+nltk==3.8.1
+spacy==3.7.2
+textstat==0.7.3
+
+# Data Storage & Processing
+chromadb==0.4.15
+langchain==0.0.350
+
+# Additional ML Dependencies
+datasets==2.14.6
+joblib==1.3.2
+
+# Testing Dependencies
+reportlab==4.0.4
