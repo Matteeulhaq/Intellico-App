@@ -18,6 +18,8 @@ backend/data
 backend/logs
 backend/models
 
+/training_data
+
 /research_papers
 /venv
 /backend/app/__pycache__

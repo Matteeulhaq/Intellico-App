@@ -36,8 +36,9 @@ class PDFProcessor:
             doc = fitz.open(pdf_path)
             text_content = ""
             metadata = {}
+            page_count = len(doc)  # Store page count before closing document
             
-            for page_num in range(len(doc)):
+            for page_num in range(page_count):
                 page = doc.load_page(page_num)
                 text_content += page.get_text()
                 
@@ -68,7 +69,7 @@ class PDFProcessor:
             return {
                 "text": combined_text,
                 "metadata": metadata,
-                "page_count": len(doc),
+                "page_count": page_count,
                 "extraction_method": "combined"
             }
             

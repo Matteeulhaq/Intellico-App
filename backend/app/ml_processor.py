@@ -130,18 +130,19 @@ class MLProcessor:
             # Generate embeddings for each chunk
             chunk_embeddings = []
             for i, chunk in enumerate(text_chunks):
-                embedding = self.generate_embeddings([chunk])[0]
+                chunk_text = chunk["text"]  # Extract text from chunk dict
+                embedding = self.generate_embeddings([chunk_text])[0]
                 chunk_embeddings.append(embedding)
                 
                 # Store in ChromaDB
                 self.collection.add(
                     embeddings=[embedding.tolist()],
-                    documents=[chunk],
+                    documents=[chunk_text],
                     metadatas=[{
                         "paper_id": paper_id,
                         "chunk_id": i,
                         "section": chunk.get("section", "unknown"),
-                        "word_count": len(chunk.split())
+                        "word_count": len(chunk_text.split())
                     }],
                     ids=[f"{paper_id}_chunk_{i}"]
                 )
@@ -154,7 +155,7 @@ class MLProcessor:
                 "total_words": paper.get("word_count", 0)
             })
             
-            embeddings_data["embeddings"].extend(chunk_embeddings)
+            embeddings_data["embeddings"].extend([embedding.tolist() for embedding in chunk_embeddings])
             embeddings_data["metadata"].extend([
                 {
                     "paper_id": paper_id,
