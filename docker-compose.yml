@@ -40,7 +40,7 @@ services:
     container_name: intellico_mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"   # host port changed to avoid conflicts
     volumes:
       - ./data/mongo:/data/db
     environment:
