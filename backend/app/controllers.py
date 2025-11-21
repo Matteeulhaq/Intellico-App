@@ -1,30 +1,130 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
+import os
+import uuid
+from io import BytesIO
+from .config import Config
+from .pdf_processor import PDFProcessor
+from .paper_analyzer import PaperAnalyzer
+
+# Initialize components
+config = Config()
+pdf_processor = PDFProcessor(storage_path=config.STORAGE_PATH)
+paper_analyzer = PaperAnalyzer(
+    mongo_uri=config.MONGO_URI,
+    base_model_name=config.BASE_MODEL_NAME,
+    adapter_path=config.ADAPTER_PATH
+)
 
 def register_routes(app):
     api = Blueprint("api", __name__, url_prefix="/api")
     
     @api.route("/upload", methods=["POST"])
     def upload():
-        # expects multipart/form-data with pdf file
-        f = request.files.get("file")
-        if not f:
-            return jsonify({"error":"no file"}), 400
-        res = process_upload(f)   # implement parsing, save to storage, store metadata
-        return jsonify(res), 200
-
+        """Upload and process PDF file"""
+        try:
+            f = request.files.get("file")
+            if not f:
+                return jsonify({"error": "no file"}), 400
+            
+            # Generate paper ID
+            paper_id = str(uuid.uuid4())
+            
+            # Process PDF
+            paper_data = pdf_processor.process_pdf(f, paper_id)
+            
+            # Index paper for RAG
+            paper_analyzer.index_paper(paper_data)
+            
+            # Extract metadata using model
+            metadata = paper_analyzer.extract_metadata(paper_data['full_text'])
+            paper_data['extracted_metadata'] = metadata
+            
+            return jsonify({
+                "paper_id": paper_id,
+                "status": "success",
+                "data": {
+                    "filename": paper_data['filename'],
+                    "word_count": paper_data['word_count'],
+                    "page_count": paper_data['page_count'],
+                    "sections": list(paper_data['sections'].keys()),
+                    "metadata": metadata
+                }
+            }), 200
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
     @api.route("/flowchart/<paper_id>", methods=["GET"])
     def flowchart(paper_id):
-        # Calls external flowchart API or internal generator if available
-        res = generate_flowchart(paper_id)
-        return jsonify(res), 200
-
+        """Generate flowchart for a paper"""
+        try:
+            # Generate flowchart
+            flowchart_image = paper_analyzer.generate_flowchart(paper_id)
+            
+            # Return as SVG
+            return send_file(
+                BytesIO(flowchart_image),
+                mimetype='image/svg+xml',
+                as_attachment=False,
+                download_name=f'{paper_id}_flowchart.svg'
+            )
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
     @api.route("/qa/<paper_id>", methods=["POST"])
     def qa(paper_id):
-        payload = request.get_json() or {}
-        q = payload.get("question")
-        if not q:
-            return jsonify({"error":"question required"}), 400
-        ans = answer_question(paper_id, q)
-        return jsonify(ans), 200
-
+        """Answer question about a paper"""
+        try:
+            payload = request.get_json() or {}
+            question = payload.get("question")
+            
+            if not question:
+                return jsonify({"error": "question required"}), 400
+            
+            # Answer question using RAG + model
+            result = paper_analyzer.answer_question(question, paper_id=paper_id)
+            
+            return jsonify({
+                "paper_id": paper_id,
+                "question": question,
+                "answer": result['answer'],
+                "num_chunks_used": result['num_chunks']
+            }), 200
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
+    @api.route("/summarize/<paper_id>", methods=["GET"])
+    def summarize(paper_id):
+        """Get summary of a paper"""
+        try:
+            # Get paper chunks
+            chunks = paper_analyzer.vector_store.get_paper_chunks(paper_id)
+            
+            if not chunks:
+                return jsonify({"error": "paper not found"}), 404
+            
+            # Get abstract or first few chunks
+            abstract_text = ""
+            for chunk in chunks:
+                if chunk.get('section', '').lower() == 'abstract':
+                    abstract_text = chunk.get('text', '')
+                    break
+            
+            if not abstract_text:
+                # Use first chunk
+                abstract_text = chunks[0].get('text', '')[:1000]
+            
+            # Generate summary
+            summary = paper_analyzer.model_router.summarize(abstract_text)
+            
+            return jsonify({
+                "paper_id": paper_id,
+                "summary": summary
+            }), 200
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    
     app.register_blueprint(api)
