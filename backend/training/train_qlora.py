@@ -177,6 +177,8 @@ def train(config: TrainingConfig):
 if __name__ == "__main__":
     import argparse
 
+    torch.cuda.empty_cache()
+
     parser = argparse.ArgumentParser(description="Train model with QLoRA")
     parser.add_argument(
         "--model", type=str, default="google/gemma-2b-it", help="Base model name"
