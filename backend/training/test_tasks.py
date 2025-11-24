@@ -167,14 +167,14 @@ def main():
     # Initialize model
     from app.models.local_model import LocalModel
     model = LocalModel(
-        base_model_name="google/gemma-2b-it",
+        base_model_name="Qwen/Qwen2.5-1.5B-Instruct",
         adapter_path=args.repo_id,
         use_hf_repo=True,
         hf_token=args.token
     )
     
     model_router = ModelRouter(
-        base_model_name="google/gemma-2b-it",
+        base_model_name="Qwen/Qwen2.5-1.5B-Instruct",
         adapter_path=args.repo_id
     )
     model_router.model = model  # Use the loaded model

@@ -13,7 +13,7 @@ class TrainingConfig:
 
     # Model settings
     base_model_name: str = (
-        "google/gemma-2b-it"  # or "mistralai/Mistral-7B-Instruct-v0.2"
+        "Qwen/Qwen2.5-1.5B-Instruct"  # SLM optimized for RAG with fine-tuning
     )
     output_dir: str = "./models/adapters"
 
@@ -21,7 +21,7 @@ class TrainingConfig:
     lora_r: int = 16
     lora_alpha: int = 32
     lora_dropout: float = 0.05
-    target_modules: Optional[list] = None  # Auto-detect for Gemma/Mistral
+    target_modules: Optional[list] = None  # Auto-detect for Qwen/Gemma/Mistral
 
     # Quantization
     load_in_4bit: bool = True
@@ -54,7 +54,18 @@ class TrainingConfig:
     def __post_init__(self):
         """Set target modules based on model"""
         if self.target_modules is None:
-            if "gemma" in self.base_model_name.lower():
+            if "qwen" in self.base_model_name.lower():
+                # Qwen models use same target modules as Gemma/Mistral
+                self.target_modules = [
+                    "q_proj",
+                    "k_proj",
+                    "v_proj",
+                    "o_proj",
+                    "gate_proj",
+                    "up_proj",
+                    "down_proj",
+                ]
+            elif "gemma" in self.base_model_name.lower():
                 self.target_modules = [
                     "q_proj",
                     "k_proj",

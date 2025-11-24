@@ -2,9 +2,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import PeftModel
 
 # Paths and names
-local_model_path = "./models/adapters/gemma-2b"  # folder where your trained LoRA adapter is
-base_model_name = "google/gemma-2b-it"           # base model
-hub_repo_name = "matteeulhaq/Intellico_Gemma-2b"    # change to your HF username/repo name
+local_model_path = "./models/adapters/qwen-1.5b"  # folder where your trained LoRA adapter is
+base_model_name = "Qwen/Qwen2.5-1.5B-Instruct"   # base model
+hub_repo_name = "matteeulhaq/Intellico_Qwen-1.5b"    # change to your HF username/repo name
 
 # 1️⃣ Load base model
 print("Loading base model...")

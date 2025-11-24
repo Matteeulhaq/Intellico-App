@@ -1,5 +1,5 @@
 """
-QLoRA Fine-tuning Script for Gemma/Mistral Models
+QLoRA Fine-tuning Script for Qwen/Gemma/Mistral Models
 """
 
 import os
@@ -181,12 +181,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train model with QLoRA")
     parser.add_argument(
-        "--model", type=str, default="google/gemma-2b-it", help="Base model name"
+        "--model", type=str, default="Qwen/Qwen2.5-1.5B-Instruct", help="Base model name"
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="./models/adapters/gemma-2b",
+        default="./models/adapters/qwen-1.5b",
         help="Output directory",
     )
     parser.add_argument(

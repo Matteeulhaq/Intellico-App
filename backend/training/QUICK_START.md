@@ -46,7 +46,7 @@ Add to `.env` file:
 ADAPTER_PATH=your-username/your-model-name
 USE_HUGGINGFACE_REPO=true
 HUGGINGFACE_TOKEN=your-hf-token
-BASE_MODEL_NAME=google/gemma-2b-it
+BASE_MODEL_NAME=Qwen/Qwen2.5-1.5B-Instruct
 ```
 
 ## Expected Results

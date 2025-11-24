@@ -20,7 +20,7 @@ def measure_inference_latency(model_router: ModelRouter, num_runs: int = 10):
     print("Measuring Inference Latency")
     print("=" * 60)
     
-    test_prompt = "<start_of_turn>user\nSummarize this research paper about oral health.<end_of_turn>\n<start_of_turn>model\n"
+    test_prompt = "<|im_start|>user\nSummarize this research paper about oral health.<|im_end|>\n<|im_start|>assistant\n"
     
     latencies = []
     
@@ -86,7 +86,7 @@ def measure_throughput(model_router: ModelRouter, duration: int = 30):
     print("Measuring Throughput")
     print("=" * 60)
     
-    test_prompt = "<start_of_turn>user\nExtract keywords from this text.<end_of_turn>\n<start_of_turn>model\n"
+    test_prompt = "<|im_start|>user\nExtract keywords from this text.<|im_end|>\n<|im_start|>assistant\n"
     
     requests_completed = 0
     start_time = time.time()
@@ -132,14 +132,14 @@ def main():
     
     # Load model
     model = LocalModel(
-        base_model_name="google/gemma-2b-it",
+        base_model_name="Qwen/Qwen2.5-1.5B-Instruct",
         adapter_path=args.repo_id,
         use_hf_repo=True,
         hf_token=args.token
     )
     
     model_router = ModelRouter(
-        base_model_name="google/gemma-2b-it",
+        base_model_name="Qwen/Qwen2.5-1.5B-Instruct",
         adapter_path=args.repo_id
     )
     model_router.model = model

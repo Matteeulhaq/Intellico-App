@@ -27,7 +27,7 @@ class LocalModel:
         Initialize local model
         
         Args:
-            base_model_name: HuggingFace model name (e.g., "google/gemma-2b-it")
+            base_model_name: HuggingFace model name (e.g., "Qwen/Qwen2.5-1.5B-Instruct")
             adapter_path: Path to fine-tuned LoRA adapter (local path or HuggingFace repo ID)
             device: Device to use ("auto", "cuda", "cpu")
             hf_token: HuggingFace token for private models

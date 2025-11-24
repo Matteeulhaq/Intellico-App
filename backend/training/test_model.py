@@ -25,7 +25,7 @@ def test_model_loading(hf_repo_id: str, hf_token: str = None):
     print("Testing Model Loading from HuggingFace")
     print("=" * 60)
     
-    base_model = "google/gemma-2b-it"
+    base_model = "Qwen/Qwen2.5-1.5B-Instruct"
     
     print(f"\n1. Loading base model: {base_model}")
     print(f"2. Loading fine-tuned adapter from: {hf_repo_id}")
@@ -63,7 +63,7 @@ def test_basic_inference(model: LocalModel):
     print("Testing Basic Inference")
     print("=" * 60)
     
-    test_prompt = "<start_of_turn>user\nHello, how are you?<end_of_turn>\n<start_of_turn>model\n"
+    test_prompt = "<|im_start|>user\nHello, how are you?<|im_end|>\n<|im_start|>assistant\n"
     
     try:
         start_time = time.time()

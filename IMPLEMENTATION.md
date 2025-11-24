@@ -5,7 +5,7 @@ This document describes the complete implementation of the LLM training and RAG 
 ## Architecture Overview
 
 The system consists of:
-1. **QLoRA Fine-tuning** - Train local models (Gemma 2B/7B, Mistral 7B) on your dataset
+1. **QLoRA Fine-tuning** - Train local SLM models (Qwen2.5-1.5B-Instruct) on your dataset
 2. **RAG Pipeline** - Retrieve relevant context from papers for question answering
 3. **Flowchart Generation** - Generate methodology flowcharts using Mermaid/Graphviz
 4. **Flask API** - RESTful endpoints for all functionality
@@ -66,11 +66,11 @@ If you want to fine-tune models on your dataset:
 cd backend/training
 pip install -r requirements.txt
 
-# For laptop (Gemma 2B)
-python train_qlora.py --model google/gemma-2b-it --output-dir ../../models/adapters/gemma-2b
+# For laptop (RTX 3050 4GB) - Recommended SLM
+python train_qlora.py --model Qwen/Qwen2.5-1.5B-Instruct --output-dir ../../models/adapters/qwen-1.5b
 
-# For office PC (Mistral 7B or Gemma 7B)
-python train_qlora.py --model mistralai/Mistral-7B-Instruct-v0.2 --output-dir ../../models/adapters/mistral-7b
+# For office PC (RTX 3060 12GB) - Can use larger models if needed
+python train_qlora.py --model Qwen/Qwen2.5-1.5B-Instruct --output-dir ../../models/adapters/qwen-1.5b
 ```
 
 ### 4. Run Application
@@ -181,7 +181,7 @@ Training datasets are loaded from:
 ## Configuration
 
 Key configuration options in `backend/app/config.py`:
-- `BASE_MODEL_NAME`: Base model to use (default: google/gemma-2b-it)
+- `BASE_MODEL_NAME`: Base model to use (default: Qwen/Qwen2.5-1.5B-Instruct)
 - `ADAPTER_PATH`: Path to fine-tuned adapter (optional)
 - `EMBEDDING_MODEL`: Embedding model (default: BAAI/bge-small-en-v1.5)
 - `FLOWCHART_RENDERER`: "mermaid" or "graphviz"
@@ -191,5 +191,6 @@ Key configuration options in `backend/app/config.py`:
 - All models run locally - no external API keys required (except optional mermaid.ink for flowcharts)
 - MongoDB is used for vector storage and retrieval
 - Fine-tuned adapters are saved separately from base models
-- System supports both Gemma and Mistral model families
+- System uses Qwen2.5-1.5B-Instruct SLM optimized for RAG-based systems with fine-tuning
+- SLM approach is better suited for smaller datasets (42 papers) and provides faster inference
 

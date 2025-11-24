@@ -17,7 +17,7 @@ class PaperAnalyzer:
     def __init__(
         self,
         mongo_uri: str,
-        base_model_name: str = "google/gemma-2b-it",
+        base_model_name: str = "Qwen/Qwen2.5-1.5B-Instruct",
         adapter_path: Optional[str] = None
     ):
         """

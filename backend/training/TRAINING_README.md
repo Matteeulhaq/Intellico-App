@@ -1,6 +1,6 @@
 # Model Training Guide
 
-This directory contains scripts for fine-tuning LLM models using QLoRA.
+This directory contains scripts for fine-tuning SLM (Small Language Model) models using QLoRA.
 
 ## Setup
 
@@ -14,24 +14,24 @@ pip install -r requirements.txt
 
 ### Basic Usage
 
-Train a model with default settings:
+Train a model with default settings (Qwen2.5-1.5B-Instruct):
 ```bash
-python train_qlora.py --model google/gemma-2b-it --output-dir ./models/adapters/gemma-2b
+python train_qlora.py --model Qwen/Qwen2.5-1.5B-Instruct --output-dir ./models/adapters/qwen-1.5b
 ```
 
 ### Training on Different Models
 
-**For Laptop (RTX 3050 4GB):**
+**For Laptop (RTX 3050 4GB) - Recommended:**
 ```bash
-python train_qlora.py --model google/gemma-2b-it --output-dir ./models/adapters/gemma-2b --epochs 3
+python train_qlora.py --model Qwen/Qwen2.5-1.5B-Instruct --output-dir ./models/adapters/qwen-1.5b --epochs 3
 ```
 
-**For Office PC (RTX 3060 12GB):**
+**For Office PC (RTX 3060 12GB) - Can use larger models:**
 ```bash
-python train_qlora.py --model mistralai/Mistral-7B-Instruct-v0.2 --output-dir ./models/adapters/mistral-7b --epochs 3
+python train_qlora.py --model Qwen/Qwen2.5-1.5B-Instruct --output-dir ./models/adapters/qwen-1.5b --epochs 3
 ```
 
-or
+or for larger models:
 
 ```bash
 python train_qlora.py --model google/gemma-7b-it --output-dir ./models/adapters/gemma-7b --epochs 3

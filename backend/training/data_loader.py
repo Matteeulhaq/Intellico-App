@@ -113,21 +113,21 @@ class TrainingDataLoader:
     
     def format_instruction(self, example: Dict[str, Any]) -> str:
         """Format example as instruction-following prompt"""
-        # Format for Gemma/Mistral instruction templates
+        # Format for Qwen (ChatML format)
         if example['task'] == 'classification':
-            prompt = f"""<start_of_turn>user
+            prompt = f"""<|im_start|>user
 {example['instruction']}
 
-Text: {example['input']}<end_of_turn>
-<start_of_turn>model
-{example['output']}<end_of_turn>"""
+Text: {example['input']}<|im_end|>
+<|im_start|>assistant
+{example['output']}<|im_end|>"""
         else:
-            prompt = f"""<start_of_turn>user
+            prompt = f"""<|im_start|>user
 {example['instruction']}
 
-{example['input']}<end_of_turn>
-<start_of_turn>model
-{example['output']}<end_of_turn>"""
+{example['input']}<|im_end|>
+<|im_start|>assistant
+{example['output']}<|im_end|>"""
         
         return prompt
     

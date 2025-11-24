@@ -8,31 +8,31 @@ class PromptTemplates:
     
     @staticmethod
     def format_instruction(instruction: str, input_text: str) -> str:
-        """Format instruction following prompt for Gemma/Mistral"""
-        return f"""<start_of_turn>user
+        """Format instruction following prompt for Qwen (ChatML format)"""
+        return f"""<|im_start|>user
 {instruction}
 
-{input_text}<end_of_turn>
-<start_of_turn>model
+{input_text}<|im_end|>
+<|im_start|>assistant
 """
     
     @staticmethod
     def question_answering(question: str, context: Optional[str] = None) -> str:
         """Template for question answering with RAG context"""
         if context:
-            prompt = f"""<start_of_turn>user
+            prompt = f"""<|im_start|>user
 Answer the following question based on the provided context from a research paper.
 
 Context:
 {context}
 
-Question: {question}<end_of_turn>
-<start_of_turn>model
+Question: {question}<|im_end|>
+<|im_start|>assistant
 """
         else:
-            prompt = f"""<start_of_turn>user
-Answer the following question: {question}<end_of_turn>
-<start_of_turn>model
+            prompt = f"""<|im_start|>user
+Answer the following question: {question}<|im_end|>
+<|im_start|>assistant
 """
         return prompt
     
