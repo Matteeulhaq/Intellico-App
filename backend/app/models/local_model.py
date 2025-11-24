@@ -15,18 +15,29 @@ from typing import Optional, Dict, Any
 class LocalModel:
     """Load and run inference with fine-tuned local models"""
     
-    def __init__(self, base_model_name: str, adapter_path: Optional[str] = None, device: str = "auto"):
+    def __init__(
+        self, 
+        base_model_name: str, 
+        adapter_path: Optional[str] = None, 
+        device: str = "auto",
+        hf_token: Optional[str] = None,
+        use_hf_repo: bool = False
+    ):
         """
         Initialize local model
         
         Args:
             base_model_name: HuggingFace model name (e.g., "google/gemma-2b-it")
-            adapter_path: Path to fine-tuned LoRA adapter
+            adapter_path: Path to fine-tuned LoRA adapter (local path or HuggingFace repo ID)
             device: Device to use ("auto", "cuda", "cpu")
+            hf_token: HuggingFace token for private models
+            use_hf_repo: Whether adapter_path is a HuggingFace repository ID
         """
         self.base_model_name = base_model_name
         self.adapter_path = adapter_path
         self.device = device
+        self.hf_token = hf_token
+        self.use_hf_repo = use_hf_repo
         self.model = None
         self.tokenizer = None
         self._load_model()
@@ -57,10 +68,25 @@ class LocalModel:
         )
         
         # Load adapter if provided
-        if self.adapter_path and os.path.exists(self.adapter_path):
-            print(f"Loading adapter from: {self.adapter_path}")
-            self.model = PeftModel.from_pretrained(self.model, self.adapter_path)
-            self.model = self.model.merge_and_unload()  # Merge adapter for faster inference
+        if self.adapter_path:
+            if self.use_hf_repo:
+                # Load from HuggingFace repository
+                print(f"Loading adapter from HuggingFace: {self.adapter_path}")
+                from peft import PeftConfig
+                self.model = PeftModel.from_pretrained(
+                    self.model, 
+                    self.adapter_path,
+                    token=self.hf_token
+                )
+            elif os.path.exists(self.adapter_path):
+                # Load from local path
+                print(f"Loading adapter from local path: {self.adapter_path}")
+                self.model = PeftModel.from_pretrained(self.model, self.adapter_path)
+            else:
+                print(f"Warning: Adapter path not found: {self.adapter_path}")
+            
+            # Merge adapter for faster inference (optional - can keep separate for flexibility)
+            # self.model = self.model.merge_and_unload()
         
         self.model.eval()
         print("Model loaded successfully")

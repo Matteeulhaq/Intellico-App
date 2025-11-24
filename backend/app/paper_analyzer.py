@@ -33,7 +33,16 @@ class PaperAnalyzer:
         self.vector_store = VectorStore(mongo_uri)
         self.chunker = TextChunker(chunk_size=512, chunk_overlap=50)
         self.rag_chain = RAGChain(self.embedder, self.vector_store)
-        self.model_router = ModelRouter(base_model_name, adapter_path)
+        # Check if adapter_path is a HuggingFace repo
+        use_hf_repo = os.getenv('USE_HUGGINGFACE_REPO', 'false').lower() == 'true'
+        hf_token = os.getenv('HUGGINGFACE_TOKEN', None)
+        
+        self.model_router = ModelRouter(
+            base_model_name, 
+            adapter_path,
+            hf_token=hf_token,
+            use_hf_repo=use_hf_repo
+        )
         
         # Flowchart components
         keyword_extractor = KeywordRelationshipExtractor(self.model_router)

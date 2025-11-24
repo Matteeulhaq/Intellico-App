@@ -11,16 +11,25 @@ class ModelRouter:
     def __init__(
         self,
         base_model_name: str = "google/gemma-2b-it",
-        adapter_path: Optional[str] = None
+        adapter_path: Optional[str] = None,
+        hf_token: Optional[str] = None,
+        use_hf_repo: bool = False
     ):
         """
         Initialize model router
         
         Args:
             base_model_name: Base model to use
-            adapter_path: Path to fine-tuned adapter
+            adapter_path: Path to fine-tuned adapter (local or HuggingFace repo)
+            hf_token: HuggingFace token for private models
+            use_hf_repo: Whether adapter_path is a HuggingFace repository ID
         """
-        self.model = LocalModel(base_model_name, adapter_path)
+        self.model = LocalModel(
+            base_model_name, 
+            adapter_path,
+            hf_token=hf_token,
+            use_hf_repo=use_hf_repo
+        )
     
     def answer_question(self, question: str, context: Optional[str] = None) -> str:
         """Answer question using model with optional RAG context"""
