@@ -21,7 +21,9 @@ class LocalModel:
         adapter_path: Optional[str] = None, 
         device: str = "auto",
         hf_token: Optional[str] = None,
-        use_hf_repo: bool = False
+        use_hf_repo: bool = False,
+        quantization_config: Optional[BitsAndBytesConfig] = None,
+        max_memory: Optional[Dict] = None
     ):
         """
         Initialize local model
@@ -32,12 +34,16 @@ class LocalModel:
             device: Device to use ("auto", "cuda", "cpu")
             hf_token: HuggingFace token for private models
             use_hf_repo: Whether adapter_path is a HuggingFace repository ID
+            quantization_config: BitsAndBytesConfig for quantization (defaults to 4-bit if None)
+            max_memory: Maximum memory per device (defaults to RTX 3050 limits if None)
         """
         self.base_model_name = base_model_name
         self.adapter_path = adapter_path
         self.device = device
         self.hf_token = hf_token
         self.use_hf_repo = use_hf_repo
+        self.quantization_config = quantization_config
+        self.max_memory = max_memory
         self.model = None
         self.tokenizer = None
         self._load_model()
@@ -46,24 +52,33 @@ class LocalModel:
         """Load model and tokenizer"""
         print(f"Loading base model: {self.base_model_name}")
         
-        # Configure quantization for inference
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-        )
+        # Configure quantization for inference (use provided config or default to 4-bit)
+        if self.quantization_config is None:
+            self.quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+            )
+        
+        # Set default max_memory if not provided (RTX 3050 limits)
+        if self.max_memory is None:
+            self.max_memory = {
+                0: "4000MB",   # GPU VRAM
+                "cpu": "8000MB"
+            }
         
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(self.base_model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # Load base model
+        # Load base model with explicit device_map="auto" and max_memory
         self.model = AutoModelForCausalLM.from_pretrained(
             self.base_model_name,
-            quantization_config=bnb_config,
-            device_map=self.device,
+            quantization_config=self.quantization_config,
+            device_map="auto",
+            max_memory=self.max_memory,
             trust_remote_code=True,
         )
         
@@ -76,16 +91,22 @@ class LocalModel:
                 self.model = PeftModel.from_pretrained(
                     self.model, 
                     self.adapter_path,
-                    token=self.hf_token
+                    token=self.hf_token,
+                    device_map="auto"
                 )
             elif os.path.exists(self.adapter_path):
                 # Load from local path
                 print(f"Loading adapter from local path: {self.adapter_path}")
-                self.model = PeftModel.from_pretrained(self.model, self.adapter_path)
+                self.model = PeftModel.from_pretrained(
+                    self.model, 
+                    self.adapter_path,
+                    device_map="auto"
+                )
             else:
                 print(f"Warning: Adapter path not found: {self.adapter_path}")
             
             # Merge adapter for faster inference (optional - can keep separate for flexibility)
+            # DO NOT merge - keeps LoRA lightweight and avoids FP16 merging
             # self.model = self.model.merge_and_unload()
         
         self.model.eval()

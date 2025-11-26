@@ -42,10 +42,14 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Compare base and fine-tuned models")
-    parser.add_argument("--repo-id", type=str, required=True, help="HuggingFace repository ID")
-    parser.add_argument("--token", type=str, default=None, help="HuggingFace token")
+    parser.add_argument("--repo-id", type=str, default=os.getenv("ADAPTER_PATH"), help="HuggingFace repository ID (or set ADAPTER_PATH env var)")
+    parser.add_argument("--token", type=str, default=os.getenv("HUGGINGFACE_TOKEN"), help="HuggingFace token (or set HUGGINGFACE_TOKEN env var)")
     
     args = parser.parse_args()
+    
+    if not args.repo_id:
+        print("Error: --repo-id is required or set ADAPTER_PATH environment variable")
+        sys.exit(1)
     
     print("=" * 60)
     print("Model Comparison: Base vs Fine-Tuned")

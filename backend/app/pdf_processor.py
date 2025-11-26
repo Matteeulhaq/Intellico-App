@@ -13,7 +13,13 @@ class PDFProcessor:
     
     def __init__(self, storage_path: str = "./storage"):
         self.storage_path = Path(storage_path)
-        self.storage_path.mkdir(parents=True, exist_ok=True)
+        # Convert to absolute path to avoid issues with working directory
+        if not self.storage_path.is_absolute():
+            # Make it relative to the backend directory
+            backend_dir = Path(__file__).parent.parent
+            self.storage_path = backend_dir / self.storage_path
+        # Create directory with proper permissions
+        self.storage_path.mkdir(parents=True, exist_ok=True, mode=0o755)
     
     def extract_text(self, pdf_path: str) -> Dict[str, any]:
         """
@@ -135,7 +141,16 @@ class PDFProcessor:
         """
         # Save uploaded file
         pdf_path = self.storage_path / f"{paper_id}.pdf"
-        pdf_file.save(str(pdf_path))
+        try:
+            pdf_file.save(str(pdf_path))
+        except PermissionError as e:
+            # Provide more helpful error message
+            raise PermissionError(
+                f"Cannot write to storage directory: {self.storage_path}\n"
+                f"Error: {e}\n"
+                f"Please ensure the directory exists and has write permissions.\n"
+                f"Run: chmod 755 {self.storage_path} or chmod 777 {self.storage_path}"
+            ) from e
         
         # Extract text
         extracted = self.extract_text(str(pdf_path))

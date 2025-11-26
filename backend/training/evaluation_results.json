@@ -1,0 +1,128 @@
+{
+  "latency": {
+    "average": 5.784926772117615,
+    "median": 0.6556063890457153,
+    "min": 0.37364864349365234,
+    "max": 35.42147350311279,
+    "std": 10.954920499722093,
+    "all": [
+      1.7340567111968994,
+      0.5276758670806885,
+      0.49541735649108887,
+      8.8294837474823,
+      0.7835369110107422,
+      0.37364864349365234,
+      0.3839070796966553,
+      35.42147350311279,
+      0.5010361671447754,
+      8.799031734466553
+    ],
+    "per_task": {
+      "classification": {
+        "average": 0.7163737614949545,
+        "median": 0.5115466117858887,
+        "min": 0.37364864349365234,
+        "max": 1.7340567111968994,
+        "std": 0.5201178143556552,
+        "count": 6
+      },
+      "summarization": {
+        "average": 22.125478625297546,
+        "median": 22.125478625297546,
+        "min": 8.8294837474823,
+        "max": 35.42147350311279,
+        "std": 18.803376281449523,
+        "count": 2
+      },
+      "metadata_extraction": {
+        "average": 0.5010361671447754,
+        "median": 0.5010361671447754,
+        "min": 0.5010361671447754,
+        "max": 0.5010361671447754,
+        "std": 0,
+        "count": 1
+      },
+      "keyword_extraction": {
+        "average": 8.799031734466553,
+        "median": 8.799031734466553,
+        "min": 8.799031734466553,
+        "max": 8.799031734466553,
+        "std": 0,
+        "count": 1
+      }
+    }
+  },
+  "memory": {
+    "allocated": 1.1525788307189941,
+    "reserved": 2.451171875,
+    "peak": 2.2693047523498535
+  },
+  "throughput": {
+    "requests": 8,
+    "duration": 57.77072334289551,
+    "throughput": 0.13847844612428276,
+    "task_distribution": {
+      "classification": 6,
+      "summarization": 2
+    }
+  },
+  "task_specific": {
+    "classification": {
+      "task": "classification",
+      "samples_tested": 6,
+      "average_latency": 0.636674960454305,
+      "median_latency": 0.6159855127334595,
+      "min_latency": 0.545325756072998,
+      "max_latency": 0.7445001602172852,
+      "std_latency": 0.08139582396716277
+    },
+    "summarization": {
+      "task": "summarization",
+      "samples_tested": 2,
+      "average_latency": 19.813952207565308,
+      "median_latency": 19.813952207565308,
+      "min_latency": 14.679457187652588,
+      "max_latency": 24.948447227478027,
+      "std_latency": 7.261272493097683
+    },
+    "keyword_extraction": {
+      "task": "keyword_extraction",
+      "samples_tested": 1,
+      "average_latency": 5.536242961883545,
+      "median_latency": 5.536242961883545,
+      "min_latency": 5.536242961883545,
+      "max_latency": 5.536242961883545,
+      "std_latency": 0
+    },
+    "metadata_extraction": {
+      "task": "metadata_extraction",
+      "samples_tested": 1,
+      "average_latency": 0.4393627643585205,
+      "median_latency": 0.4393627643585205,
+      "min_latency": 0.4393627643585205,
+      "max_latency": 0.4393627643585205,
+      "std_latency": 0
+    }
+  },
+  "evaluation_config": {
+    "num_papers": 10,
+    "tasks_evaluated": [
+      "classification",
+      "summarization",
+      "keyword_extraction",
+      "metadata_extraction"
+    ],
+    "paper_ids": [
+      "26890216_01042023_23",
+      "journal.pone.0295078",
+      "s12903-025-05454-z",
+      "s12903-022-02095-4",
+      "CLR-31-1253",
+      "s12903-025-06053-8",
+      "dentistry-13-00494",
+      "jcm-12-05291",
+      "medicina-55-00676",
+      "journal.pone.0288677"
+    ]
+  }
+}
