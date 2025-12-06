@@ -15,6 +15,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 /training_data
 /venv
 /backend/training/models
+/backend/storage
 
 .python-version
 
