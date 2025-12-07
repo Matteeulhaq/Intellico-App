@@ -5,6 +5,7 @@ from io import BytesIO
 from .config import Config
 from .pdf_processor import PDFProcessor
 from .paper_analyzer import PaperAnalyzer
+from typing import Optional, Dict
 
 # Initialize components
 config = Config()
@@ -63,7 +64,7 @@ def register_routes(app):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             
-            # Generate flowchart
+            # Generate flowchart image
             flowchart_image = paper_analyzer.generate_flowchart(paper_id)
             
             # Clear GPU cache after generation

@@ -70,3 +70,42 @@ class FlowchartGenerator:
                 relationships=relationships
             )
 
+    def generate_mermaid_code(
+        self,
+        paper_text: str,
+        sections: Optional[Dict[str, str]] = None
+    ) -> str:
+        """
+        Generate Mermaid code from paper showing keyword/terminology relationships
+        
+        Args:
+            paper_text: Full paper text
+            sections: Optional dictionary of sections (abstract, introduction, etc.)
+            
+        Returns:
+            Mermaid diagram code as string
+        """
+        # Extract keywords and relationships
+        keywords, relationships = self.extractor.extract_keywords_and_relationships(
+            paper_text, 
+            sections=sections
+        )
+        
+        if not keywords:
+            # Fallback: create a simple flowchart
+            keywords = ["Key terms could not be extracted from this paper"]
+            relationships = []
+        
+        # Build concept flow (ordered terms)
+        concept_flow = self.extractor.build_concept_flow(keywords, relationships)
+        
+        # Generate mermaid code (without rendering)
+        if self.renderer_type == "mermaid":
+            return self.renderer.keywords_to_mermaid(
+                concept_flow, 
+                relationships=relationships
+            )
+        else:
+            # For graphviz, return empty for now
+            return ""
+

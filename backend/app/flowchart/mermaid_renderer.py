@@ -18,7 +18,8 @@ class MermaidRenderer:
             use_api: Use mermaid.ink API (free, no key) or local rendering
         """
         self.use_api = use_api
-        self.api_url = "https://mermaid.ink/img/"
+        self.api_url_img = "https://mermaid.ink/img/"  # For PNG/JPEG
+        self.api_url_svg = "https://mermaid.ink/svg/"  # For SVG
     
     def keywords_to_mermaid(
         self, 
@@ -146,7 +147,12 @@ class MermaidRenderer:
         if self.use_api:
             # Use mermaid.ink API (free, no authentication)
             encoded = base64.urlsafe_b64encode(mermaid_code.encode()).decode().rstrip('=')
-            url = f"{self.api_url}{encoded}.{format}"
+            
+            # Use correct endpoint based on format
+            if format.lower() == "svg":
+                url = f"{self.api_url_svg}{encoded}"
+            else:
+                url = f"{self.api_url_img}{encoded}.{format}"
             
             print(f"Requesting from: {url[:100]}...")  # Log first 100 chars of URL
             
@@ -194,4 +200,5 @@ class MermaidRenderer:
         """
         mermaid_code = self.keywords_to_mermaid(keywords, relationships)
         return self.render(mermaid_code, output_format)
+
 

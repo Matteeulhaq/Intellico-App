@@ -142,6 +142,45 @@ class PaperAnalyzer:
         
         return flowchart_image
     
+    def generate_flowchart_mermaid_code(self, paper_id: str) -> str:
+        """
+        Generate Mermaid code for a paper's flowchart
+        
+        Args:
+            paper_id: Paper identifier
+            
+        Returns:
+            Mermaid diagram code as string
+        """
+        # Get paper chunks
+        chunks = self.vector_store.get_paper_chunks(paper_id)
+        
+        # Reconstruct sections from chunks
+        sections = {}
+        full_text_parts = []
+        
+        for chunk in chunks:
+            section_name = chunk.get('section', 'content')
+            text = chunk.get('text', '')
+            
+            if section_name not in sections:
+                sections[section_name] = text
+            else:
+                sections[section_name] += "\n" + text
+            
+            full_text_parts.append(text)
+        
+        # Combine full text
+        full_text = "\n\n".join(full_text_parts)
+        
+        # Generate mermaid code
+        mermaid_code = self.flowchart_generator.generate_mermaid_code(
+            full_text,
+            sections=sections if sections else None
+        )
+        
+        return mermaid_code
+    
     def extract_metadata(self, paper_text: str) -> Dict:
         """Extract metadata from paper text"""
         return self.model_router.extract_metadata(paper_text)
