@@ -21,7 +21,7 @@ class PromptTemplates:
         """Template for question answering with RAG context"""
         if context:
             prompt = f"""<|im_start|>user
-Answer the following question based on the provided context from a research paper.
+Answer the following question based on the provided context from a research paper. Provide a direct, concise answer based only on information explicitly stated in the context. Do not infer or speculate.
 
 Context:
 {context}
@@ -31,7 +31,7 @@ Question: {question}<|im_end|>
 """
         else:
             prompt = f"""<|im_start|>user
-Answer the following question: {question}<|im_end|>
+Answer the following question directly and concisely: {question}<|im_end|>
 <|im_start|>assistant
 """
         return prompt

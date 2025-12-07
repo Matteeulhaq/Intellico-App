@@ -149,11 +149,29 @@ class LocalModel:
             )
         
         # Decode
-        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=False)
         
-        # Remove prompt from output
+        # Extract only the assistant's response (text after <|im_start|>assistant)
+        assistant_marker = "<|im_start|>assistant"
+        if assistant_marker in generated_text:
+            # Find the start of assistant response
+            assistant_start = generated_text.find(assistant_marker)
+            if assistant_start != -1:
+                # Extract text after the marker
+                assistant_text = generated_text[assistant_start + len(assistant_marker):]
+                # Remove any trailing special tokens and markers
+                assistant_text = assistant_text.strip()
+                # Remove <|im_end|> if present
+                if "<|im_end|>" in assistant_text:
+                    assistant_text = assistant_text.split("<|im_end|>")[0].strip()
+                return assistant_text
+        
+        # Fallback: try to remove prompt if assistant marker not found
         if prompt in generated_text:
             generated_text = generated_text.replace(prompt, "").strip()
+        
+        # Remove any remaining special tokens
+        generated_text = generated_text.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
         
         return generated_text
     
