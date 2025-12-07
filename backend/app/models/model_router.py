@@ -2,6 +2,7 @@
 Model router - selects appropriate model for tasks
 """
 import os
+import torch
 from typing import Optional
 from .local_model import LocalModel
 
@@ -37,26 +38,51 @@ class ModelRouter:
         
         prompt = PromptTemplates.question_answering(question, context)
         response = self.model.generate(prompt, max_new_tokens=512, temperature=0.7)
+        
+        # Clear GPU cache periodically
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         return response.strip()
     
     def summarize(self, text: str) -> str:
         """Summarize text"""
         from .prompt_templates import PromptTemplates
         
+        # Limit text length
+        if len(text) > 2000:
+            text = text[:2000] + "..."
+        
         prompt = PromptTemplates.summarization(text)
         response = self.model.generate(prompt, max_new_tokens=256, temperature=0.5)
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         return response.strip()
     
     def extract_metadata(self, text: str) -> dict:
         """Extract metadata from text"""
-        return self.model.extract_metadata(text)
+        result = self.model.extract_metadata(text)
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        return result
     
     def extract_methodology(self, text: str) -> list:
         """Extract methodology steps from text"""
         from .prompt_templates import PromptTemplates
         
+        # Limit text length
+        if len(text) > 3000:
+            text = text[:3000] + "..."
+        
         prompt = PromptTemplates.methodology_extraction(text)
         response = self.model.generate(prompt, max_new_tokens=512, temperature=0.3)
+        
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         
         # Parse steps (one per line)
         steps = [step.strip() for step in response.split('\n') if step.strip()]
@@ -66,7 +92,16 @@ class ModelRouter:
         """Extract keywords/terminologies and their relationships from text"""
         from .prompt_templates import PromptTemplates
         
+        # Limit text length to prevent OOM
+        if len(text) > 4000:
+            text = text[:4000] + "..."
+        
         prompt = PromptTemplates.keyword_relationship_extraction(text)
         response = self.model.generate(prompt, max_new_tokens=1024, temperature=0.3)
+        
+        # Clear GPU cache after processing
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
         return response
 

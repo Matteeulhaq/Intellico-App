@@ -57,9 +57,18 @@ def register_routes(app):
     @api.route("/flowchart/<paper_id>", methods=["GET"])
     def flowchart(paper_id):
         """Generate flowchart for a paper"""
+        import torch
         try:
+            # Clear GPU cache before generation
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
             # Generate flowchart
             flowchart_image = paper_analyzer.generate_flowchart(paper_id)
+            
+            # Clear GPU cache after generation
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             
             # Return as SVG
             return send_file(
@@ -70,6 +79,9 @@ def register_routes(app):
             )
         
         except Exception as e:
+            # Clear GPU cache on error
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
             return jsonify({"error": str(e)}), 500
     
     @api.route("/qa/<paper_id>", methods=["POST"])

@@ -4,6 +4,7 @@ Extract keywords/terminologies and their relationships using fine-tuned model
 from typing import List, Dict, Tuple
 import json
 import re
+import torch
 from ..models.model_router import ModelRouter
 
 class KeywordRelationshipExtractor:
@@ -11,6 +12,7 @@ class KeywordRelationshipExtractor:
     
     def __init__(self, model_router: ModelRouter):
         self.model_router = model_router
+        self.max_text_length = 4000  # Limit text length to prevent OOM
     
     def extract_keywords_and_relationships(
         self, 
@@ -28,25 +30,39 @@ class KeywordRelationshipExtractor:
             Tuple of (keywords_list, relationships_list)
             relationships_list contains tuples of (source_term, target_term)
         """
-        # Use full text or combine sections
-        text_to_use = paper_text
-        if sections:
-            # Prioritize abstract and introduction for key terms
-            priority_sections = ['abstract', 'introduction', 'methodology', 'results']
-            combined_text = []
-            for section in priority_sections:
-                if section in sections:
-                    combined_text.append(sections[section])
-            if combined_text:
-                text_to_use = '\n\n'.join(combined_text)
-        
-        # Extract keywords and relationships using model
-        result = self.model_router.extract_keyword_relationships(text_to_use)
-        
-        # Parse result
-        keywords, relationships = self._parse_relationships(result)
-        
-        return keywords, relationships
+        try:
+            # Use full text or combine sections
+            text_to_use = paper_text
+            if sections:
+                # Prioritize abstract and introduction for key terms
+                priority_sections = ['abstract', 'introduction', 'methodology', 'results']
+                combined_text = []
+                for section in priority_sections:
+                    if section in sections:
+                        combined_text.append(sections[section])
+                if combined_text:
+                    text_to_use = '\n\n'.join(combined_text)
+            
+            # Limit text length to prevent OOM
+            if len(text_to_use) > self.max_text_length:
+                text_to_use = text_to_use[:self.max_text_length] + "..."
+            
+            # Extract keywords and relationships using model
+            result = self.model_router.extract_keyword_relationships(text_to_use)
+            
+            # Parse result
+            keywords, relationships = self._parse_relationships(result)
+            
+            # Clear GPU cache after processing
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            
+            return keywords, relationships
+        except Exception as e:
+            # Clear GPU cache on error
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            raise e
     
     def _parse_relationships(self, model_output: str) -> Tuple[List[str], List[Tuple[str, str]]]:
         """

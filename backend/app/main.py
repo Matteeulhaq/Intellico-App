@@ -1,8 +1,12 @@
+import os
+# Set PyTorch CUDA memory allocator config BEFORE importing torch
+# This must be done before any PyTorch imports
+os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from pathlib import Path
-import os
 from .controllers import register_routes
 
 # Load .env file before creating Flask app

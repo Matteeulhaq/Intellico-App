@@ -4,6 +4,7 @@ Mermaid flowchart rendering
 from typing import List
 import requests
 import base64
+import re
 from urllib.parse import quote
 
 class MermaidRenderer:
@@ -36,6 +37,24 @@ class MermaidRenderer:
         Returns:
             Mermaid diagram code
         """
+        # Validate and filter keywords
+        if not keywords:
+            return "flowchart TD\n    empty[\"No keywords found\"]\n"
+        
+        # Filter out empty or invalid keywords
+        valid_keywords = []
+        for keyword in keywords:
+            if keyword and isinstance(keyword, str):
+                cleaned = keyword.strip()
+                if cleaned and len(cleaned) > 0:
+                    valid_keywords.append(cleaned)
+        
+        if not valid_keywords:
+            return "flowchart TD\n    empty[\"No valid keywords found\"]\n"
+        
+        # Limit to prevent overly large diagrams
+        valid_keywords = valid_keywords[:20]
+        
         if flowchart_type == "flowchart":
             mermaid_code = "flowchart TD\n"
         else:
@@ -45,12 +64,30 @@ class MermaidRenderer:
         node_map = {}
         nodes = []
         
-        for i, keyword in enumerate(keywords, 1):
-            # Clean keyword for node ID and label
-            clean_keyword = keyword[:40].replace('"', "'").replace('\n', ' ').strip()
+        for i, keyword in enumerate(valid_keywords, 1):
+            # Sanitize keyword for Mermaid node label
+            # Remove or replace characters that break Mermaid syntax
+            clean_keyword = keyword[:50]  # Limit length
+            # Replace problematic characters
+            clean_keyword = clean_keyword.replace('\n', ' ').replace('\r', ' ')
+            clean_keyword = clean_keyword.replace('"', "'")  # Replace double quotes
+            clean_keyword = clean_keyword.replace('`', "'")  # Replace backticks
+            clean_keyword = clean_keyword.replace('{', '(').replace('}', ')')  # Replace braces
+            clean_keyword = clean_keyword.replace('[', '(').replace(']', ')')  # Replace brackets in labels
+            clean_keyword = re.sub(r'[<>]', '', clean_keyword)  # Remove angle brackets
+            clean_keyword = clean_keyword.strip()
+            
+            # Skip if empty after cleaning
+            if not clean_keyword:
+                continue
+            
             node_id = f"term{i}"
             node_map[keyword] = node_id
-            nodes.append(f'    {node_id}["{clean_keyword}"]')
+            # Use parentheses for node labels to avoid quote issues
+            nodes.append(f'    {node_id}("{clean_keyword}")')
+        
+        if not nodes:
+            return "flowchart TD\n    empty[\"No valid keywords after sanitization\"]\n"
         
         mermaid_code += "\n".join(nodes) + "\n"
         
@@ -60,11 +97,12 @@ class MermaidRenderer:
             for from_term, to_term in relationships:
                 from_id = node_map.get(from_term)
                 to_id = node_map.get(to_term)
-                if from_id and to_id:
+                # Only add edge if both nodes exist
+                if from_id and to_id and from_id != to_id:
                     edges.append(f"    {from_id} --> {to_id}")
         else:
             # If no relationships, create sequential flow
-            for i in range(len(keywords) - 1):
+            for i in range(len(nodes) - 1):
                 edges.append(f"    term{i+1} --> term{i+2}")
         
         if edges:
@@ -98,16 +136,39 @@ class MermaidRenderer:
         Returns:
             Image bytes
         """
+        # Validate mermaid code
+        if not mermaid_code or not mermaid_code.strip():
+            raise ValueError("Empty Mermaid code provided")
+        
+        # Log the mermaid code for debugging
+        print(f"Generated Mermaid code:\n{mermaid_code}\n")
+        
         if self.use_api:
             # Use mermaid.ink API (free, no authentication)
             encoded = base64.urlsafe_b64encode(mermaid_code.encode()).decode().rstrip('=')
             url = f"{self.api_url}{encoded}.{format}"
             
-            response = requests.get(url)
+            print(f"Requesting from: {url[:100]}...")  # Log first 100 chars of URL
+            
+            response = requests.get(url, timeout=30)
+            
             if response.status_code == 200:
+                # Check if response is an error image (JPEG/PNG error message)
+                content_type = response.headers.get('Content-Type', '')
+                if format.lower() == "svg" and 'image' in content_type.lower() and 'svg' not in content_type.lower():
+                    # Got an image but expected SVG - likely an error image
+                    print(f"Warning: Got image ({content_type}) instead of SVG. Mermaid code may have syntax errors.")
+                    print(f"Mermaid code was:\n{mermaid_code}")
+                    raise ValueError(f"Mermaid syntax error - API returned error image. Check the generated Mermaid code.")
+                
                 return response.content
             else:
-                raise Exception(f"Mermaid API error: {response.status_code}")
+                error_msg = f"Mermaid API error: {response.status_code}"
+                if response.text:
+                    error_msg += f" - {response.text[:200]}"
+                print(f"Error: {error_msg}")
+                print(f"Mermaid code was:\n{mermaid_code}")
+                raise Exception(error_msg)
         else:
             # Local rendering would require mermaid-cli or similar
             # For now, fallback to API
