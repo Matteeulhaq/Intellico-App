@@ -1,0 +1,217 @@
+"""
+Local model loader and inference
+"""
+import os
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig
+)
+from peft import PeftModel
+import json
+from typing import Optional, Dict, Any
+
+class LocalModel:
+    """Load and run inference with fine-tuned local models"""
+    
+    def __init__(
+        self, 
+        base_model_name: str, 
+        adapter_path: Optional[str] = None, 
+        device: str = "auto",
+        hf_token: Optional[str] = None,
+        use_hf_repo: bool = False,
+        quantization_config: Optional[BitsAndBytesConfig] = None,
+        max_memory: Optional[Dict] = None
+    ):
+        """
+        Initialize local model
+        
+        Args:
+            base_model_name: HuggingFace model name (e.g., "Qwen/Qwen2.5-1.5B-Instruct")
+            adapter_path: Path to fine-tuned LoRA adapter (local path or HuggingFace repo ID)
+            device: Device to use ("auto", "cuda", "cpu")
+            hf_token: HuggingFace token for private models
+            use_hf_repo: Whether adapter_path is a HuggingFace repository ID
+            quantization_config: BitsAndBytesConfig for quantization (defaults to 4-bit if None)
+            max_memory: Maximum memory per device (defaults to RTX 3050 limits if None)
+        """
+        self.base_model_name = base_model_name
+        self.adapter_path = adapter_path
+        self.device = device
+        self.hf_token = hf_token
+        self.use_hf_repo = use_hf_repo
+        self.quantization_config = quantization_config
+        self.max_memory = max_memory
+        self.model = None
+        self.tokenizer = None
+        self._load_model()
+    
+    def _load_model(self):
+        """Load model and tokenizer"""
+        print(f"Loading base model: {self.base_model_name}")
+        
+        # Configure quantization for inference (use provided config or default to 4-bit)
+        if self.quantization_config is None:
+            self.quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+            )
+        
+        # Set default max_memory if not provided (RTX 3050 limits)
+        if self.max_memory is None:
+            self.max_memory = {
+                0: "4000MB",   # GPU VRAM
+                "cpu": "8000MB"
+            }
+        
+        # Load tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(self.base_model_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        
+        # Load base model with explicit device_map="auto" and max_memory
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.base_model_name,
+            quantization_config=self.quantization_config,
+            device_map="auto",
+            max_memory=self.max_memory,
+            trust_remote_code=True,
+        )
+        
+        # Load adapter if provided
+        if self.adapter_path:
+            if self.use_hf_repo:
+                # Load from HuggingFace repository
+                print(f"Loading adapter from HuggingFace: {self.adapter_path}")
+                from peft import PeftConfig
+                self.model = PeftModel.from_pretrained(
+                    self.model, 
+                    self.adapter_path,
+                    token=self.hf_token,
+                    device_map="auto"
+                )
+            elif os.path.exists(self.adapter_path):
+                # Load from local path
+                print(f"Loading adapter from local path: {self.adapter_path}")
+                self.model = PeftModel.from_pretrained(
+                    self.model, 
+                    self.adapter_path,
+                    device_map="auto"
+                )
+            else:
+                print(f"Warning: Adapter path not found: {self.adapter_path}")
+            
+            # Merge adapter for faster inference (optional - can keep separate for flexibility)
+            # DO NOT merge - keeps LoRA lightweight and avoids FP16 merging
+            # self.model = self.model.merge_and_unload()
+        
+        self.model.eval()
+        print("Model loaded successfully")
+    
+    def generate(
+        self,
+        prompt: str,
+        max_new_tokens: int = 512,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        do_sample: bool = True
+    ) -> str:
+        """
+        Generate text from prompt
+        
+        Args:
+            prompt: Input prompt
+            max_new_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            top_p: Nucleus sampling parameter
+            do_sample: Whether to use sampling
+            
+        Returns:
+            Generated text
+        """
+        # Tokenize
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        
+        # Generate
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                do_sample=do_sample,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+            )
+        
+        # Decode
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=False)
+        
+        # Extract only the assistant's response (text after <|im_start|>assistant)
+        assistant_marker = "<|im_start|>assistant"
+        if assistant_marker in generated_text:
+            # Find the start of assistant response
+            assistant_start = generated_text.find(assistant_marker)
+            if assistant_start != -1:
+                # Extract text after the marker
+                assistant_text = generated_text[assistant_start + len(assistant_marker):]
+                # Remove any trailing special tokens and markers
+                assistant_text = assistant_text.strip()
+                # Remove <|im_end|> if present
+                if "<|im_end|>" in assistant_text:
+                    assistant_text = assistant_text.split("<|im_end|>")[0].strip()
+                return assistant_text
+        
+        # Fallback: try to remove prompt if assistant marker not found
+        if prompt in generated_text:
+            generated_text = generated_text.replace(prompt, "").strip()
+        
+        # Remove any remaining special tokens
+        generated_text = generated_text.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
+        
+        return generated_text
+    
+    def extract_metadata(self, text: str) -> Dict[str, Any]:
+        """Extract metadata from paper text"""
+        from .prompt_templates import PromptTemplates
+        
+        prompt = PromptTemplates.metadata_extraction(text)
+        response = self.generate(prompt, max_new_tokens=256, temperature=0.3)
+        
+        # Try to parse JSON response
+        try:
+            # Extract JSON from response if wrapped in text
+            if "{" in response and "}" in response:
+                json_start = response.find("{")
+                json_end = response.rfind("}") + 1
+                json_str = response[json_start:json_end]
+                metadata = json.loads(json_str)
+            else:
+                metadata = json.loads(response)
+        except:
+            # Fallback: return raw response
+            metadata = {"raw_response": response}
+        
+        return metadata
+    
+    def classify_section(self, text: str) -> str:
+        """Classify text section"""
+        from .prompt_templates import PromptTemplates
+        
+        prompt = PromptTemplates.section_classification(text)
+        response = self.generate(prompt, max_new_tokens=50, temperature=0.1)
+        
+        # Clean response
+        response = response.strip().lower()
+        valid_sections = ["abstract", "introduction", "methodology", "results", "discussion", "conclusion", "references"]
+        
+        for section in valid_sections:
+            if section in response:
+                return section
+        
+        return response
+
