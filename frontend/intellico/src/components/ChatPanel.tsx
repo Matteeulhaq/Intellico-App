@@ -5,6 +5,7 @@ import { Send, Loader2, MessageSquare } from "lucide-react";
 import { askQuestion } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { cleanMarkdown } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
 import { toast } from "sonner";
 
@@ -71,7 +72,9 @@ export function ChatPanel({ paperId }: { paperId: string }) {
                     : "bg-neutral-100 text-neutral-900"
                 }`}
               >
-                <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                <p className="whitespace-pre-wrap text-sm">
+                  {msg.role === "assistant" ? cleanMarkdown(msg.content) : msg.content}
+                </p>
                 {msg.role === "assistant" && msg.numChunks != null && (
                   <details className="mt-2">
                     <summary className="cursor-pointer text-xs text-neutral-500">

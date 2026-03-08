@@ -2,18 +2,19 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=http://backend:2750
     container_name: intellico_frontend
     restart: unless-stopped
     ports:
-      - "2600:80"            # Exposes nginx at host:2600
+      - "2600:3000"            # Next.js default port
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=http://backend:2750/api
+      - NEXT_PUBLIC_API_BASE_URL=http://backend:2750
     networks:
       - intellico_net
-    # volumes:
-    #   - ./frontend:/usr/share/nginx/html:ro   # optional for local dev (if you want to override build)
 
   backend:
     build:
