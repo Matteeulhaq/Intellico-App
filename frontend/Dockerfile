@@ -1,25 +1,30 @@
-# Build stage
-FROM node:20-alpine AS build
+# Dependencies stage
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Copy only package files first for efficient caching
-COPY my-app/package*.json ./
+COPY intellico/package*.json ./
 RUN npm ci
 
-# Copy all app source
-COPY my-app ./
+# Builder stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY intellico ./
 
-# Environment variable for API URL
-ARG REACT_APP_API_URL
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
-# Build the Vite project
 RUN npm run build
 
-# Production stage
-FROM nginx:stable-alpine
-# Copy the built assets from the Vite build output
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Runner stage
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
