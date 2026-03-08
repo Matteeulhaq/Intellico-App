@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/Button";
 export function Sidebar({ className = "" }: { className?: string }) {
   const { papers, selectedPaperId, setSelectedPaper, setShowUpload } = useStore();
 
-  const onNewUpload = () => setShowUpload(true);
+  const onNewUpload = () => {
+    setSelectedPaper(null);
+    setShowUpload(true);
+  };
 
   return (
     <aside
