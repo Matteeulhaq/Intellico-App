@@ -6,6 +6,7 @@ import { getSummary } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
+import { cleanMarkdown } from "@/lib/utils";
 import { toast } from "sonner";
 
 function truncateBySentences(text: string, count: number): string {
@@ -89,17 +90,17 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
           <div className="mt-4">
             <TabsContent value="short">
               <Card className="prose prose-sm max-w-none">
-                <p className="whitespace-pre-wrap text-neutral-700">{short}</p>
+                <p className="whitespace-pre-wrap text-neutral-700">{cleanMarkdown(short)}</p>
               </Card>
             </TabsContent>
             <TabsContent value="medium">
               <Card className="prose prose-sm max-w-none">
-                <p className="whitespace-pre-wrap text-neutral-700">{medium}</p>
+                <p className="whitespace-pre-wrap text-neutral-700">{cleanMarkdown(medium)}</p>
               </Card>
             </TabsContent>
             <TabsContent value="detailed">
               <Card className="prose prose-sm max-w-none">
-                <p className="whitespace-pre-wrap text-neutral-700">{summary}</p>
+                <p className="whitespace-pre-wrap text-neutral-700">{cleanMarkdown(summary)}</p>
               </Card>
             </TabsContent>
           </div>

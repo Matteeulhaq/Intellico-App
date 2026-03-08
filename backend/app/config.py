@@ -30,3 +30,7 @@ class Config:
         # Flowchart settings
         self.FLOWCHART_RENDERER = os.getenv('FLOWCHART_RENDERER', 'mermaid')  # 'mermaid' or 'graphviz'
 
+        # Guardrail settings
+        self.GUARDRAIL_STRICT_MODE = os.getenv('GUARDRAIL_STRICT_MODE', 'true').lower() == 'true'
+        self.GUARDRAIL_LOG_REJECTIONS = os.getenv('GUARDRAIL_LOG_REJECTIONS', 'true').lower() == 'true'
+
