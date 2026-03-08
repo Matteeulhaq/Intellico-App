@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { PaperHeader } from "./PaperHeader";
 import { SummaryTabs } from "./SummaryTabs";
 import { ChatPanel } from "./ChatPanel";
@@ -22,13 +21,7 @@ export function Workspace() {
 
   const onUploadSuccess = () => setShowUpload(false);
 
-  const showUploadView = showUpload || papers.length === 0;
-
-  useEffect(() => {
-    if (papers.length > 0 && !selectedPaperId && !showUpload) {
-      setSelectedPaper(papers[0].paper_id);
-    }
-  }, [papers.length, selectedPaperId, showUpload, setSelectedPaper]);
+  const showUploadView = showUpload || papers.length === 0 || !selectedPaperId;
 
   if (showUploadView && !paper) {
     return (

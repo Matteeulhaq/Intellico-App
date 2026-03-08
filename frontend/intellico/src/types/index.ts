@@ -14,6 +14,7 @@ export interface PaperRecord {
   sections?: string[];
   metadata?: PaperMetadata;
   uploadedAt: number;
+  chatHistory?: ChatMessage[];
 }
 
 export interface UploadResponse {

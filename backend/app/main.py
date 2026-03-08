@@ -1,4 +1,6 @@
 import os
+import signal
+import sys
 # Set PyTorch CUDA memory allocator config BEFORE importing torch
 # This must be done before any PyTorch imports
 os.environ.setdefault('PYTORCH_CUDA_ALLOC_CONF', 'expandable_segments:True')
@@ -92,5 +94,60 @@ if __name__ == "__main__":
     print(f"  Summarize: http://{host}:{port}/api/summarize/<paper_id>")
     print(f"  Flowchart: http://{host}:{port}/api/flowchart/<paper_id>")
     print("\nPress CTRL+C to stop the server\n")
-    
-    app.run(host=host, port=port, debug=debug)
+
+    # Global flag to indicate shutdown
+    shutdown_flag = False
+
+    def cleanup_and_exit(signum=None, frame=None):
+        """Gracefully cleanup resources before exiting"""
+        global shutdown_flag
+        if shutdown_flag:
+            # Already shutting down, force exit
+            os._exit(0)
+
+        shutdown_flag = True
+        print("\n\nShutting down gracefully...")
+
+        try:
+            # Cleanup model and GPU memory
+            if 'paper_analyzer' in sys.modules:
+                from .controllers import paper_analyzer
+                if hasattr(paper_analyzer, 'model_router') and paper_analyzer.model_router:
+                    print("  - Unloading model...")
+                    # Clean up model
+                    if hasattr(paper_analyzer.model_router, 'model'):
+                        del paper_analyzer.model_router.model
+                    paper_analyzer.model_router.model = None
+                # Clean up any remaining references
+                if hasattr(paper_analyzer, 'model_router'):
+                    paper_analyzer.model_router = None
+
+            # Cleanup PyTorch CUDA memory
+            if 'torch' in sys.modules:
+                import torch
+                if torch.cuda.is_available():
+                    print("  - Clearing GPU cache...")
+                    torch.cuda.empty_cache()
+
+            # Force garbage collection
+            import gc
+            gc.collect()
+            print("  - Cleanup complete")
+
+        except Exception as e:
+            print(f"  - Cleanup error: {e}")
+
+        print("Goodbye!\n")
+        os._exit(0)
+
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, cleanup_and_exit)   # Ctrl+C
+    signal.signal(signal.SIGTERM, cleanup_and_exit) # terminate command
+
+    try:
+        app.run(host=host, port=port, debug=debug, use_reloader=False)
+    except KeyboardInterrupt:
+        cleanup_and_exit()
+    except Exception as e:
+        print(f"\nUnexpected error: {e}")
+        cleanup_and_exit()

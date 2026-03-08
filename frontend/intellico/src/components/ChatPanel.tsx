@@ -6,14 +6,24 @@ import { askQuestion } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cleanMarkdown } from "@/lib/utils";
+import { useStore } from "@/lib/store";
 import type { ChatMessage } from "@/types";
 import { toast } from "sonner";
 
 export function ChatPanel({ paperId }: { paperId: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const getPaper = useStore((s) => s.getPaper);
+  const addChatMessage = useStore((s) => s.addChatMessage);
+  const paper = getPaper(paperId);
+
+  const [messages, setMessages] = useState<ChatMessage[]>(paper?.chatHistory || []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load chat history from store when paperId changes
+  useEffect(() => {
+    setMessages(paper?.chatHistory || []);
+  }, [paperId, paper]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,7 +39,9 @@ export function ChatPanel({ paperId }: { paperId: string }) {
       role: "user",
       content: q,
     };
-    setMessages((m) => [...m, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    addChatMessage(paperId, userMsg);
     setLoading(true);
     try {
       const res = await askQuestion(paperId, q);
@@ -39,10 +51,12 @@ export function ChatPanel({ paperId }: { paperId: string }) {
         content: res.answer,
         numChunks: res.num_chunks_used,
       };
-      setMessages((m) => [...m, assistantMsg]);
+      const finalMessages = [...newMessages, assistantMsg];
+      setMessages(finalMessages);
+      addChatMessage(paperId, assistantMsg);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to get answer.");
-      setMessages((m) => m.filter((msg) => msg.id !== userMsg.id));
+      setMessages(messages);
     } finally {
       setLoading(false);
     }
