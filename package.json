@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@iflow-mcp/git-mcp": "^1.0.0"
+  }
+}
