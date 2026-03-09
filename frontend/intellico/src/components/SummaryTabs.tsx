@@ -44,7 +44,7 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
 
   if (!summary) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-neutral-500">
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-[var(--muted-foreground)]">
         No summary available.
       </div>
     );
@@ -74,7 +74,7 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
   const isMediumTruncated = medium.length < summary.length;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
+    <div className="flex flex-1 flex-col gap-4 bg-[var(--background)] p-6">
       <div className="flex items-center justify-between gap-4">
         <Tabs defaultValue="detailed" className="flex-1">
           <TabsList className="w-fit">

@@ -52,38 +52,38 @@ export function Workspace() {
   if (!paper) return null;
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden bg-[var(--background)]">
       <PaperHeader paper={paper} />
       <Tabs defaultValue="summary" className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b border-neutral-200 bg-white px-6">
+        <div className="border-b border-[var(--border)] bg-white px-6">
           <TabsList className="w-full justify-start gap-0 rounded-none border-0 bg-transparent p-0">
             <TabsTrigger
               value="summary"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-neutral-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--primary)] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
               Summary
             </TabsTrigger>
             <TabsTrigger
               value="qa"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-neutral-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--primary)] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
               Q&A
             </TabsTrigger>
             <TabsTrigger
               value="keywords"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-neutral-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--primary)] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
               Keywords
             </TabsTrigger>
             <TabsTrigger
               value="flowchart"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-neutral-900 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-[var(--primary)] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
             >
               Flowchart
             </TabsTrigger>
           </TabsList>
         </div>
-        <div className="flex flex-1 flex-col overflow-hidden bg-neutral-50/50">
+        <div className="flex flex-1 flex-col overflow-hidden bg-[var(--background)]">
           <TabsContent value="summary" className="m-0 flex flex-1 flex-col overflow-hidden">
             <SummaryTabs paperId={paper.paper_id} />
           </TabsContent>

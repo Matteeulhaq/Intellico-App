@@ -38,7 +38,7 @@ export function Tabs({
 export function TabsList({ className = "", children }: { className?: string; children: ReactNode }) {
   return (
     <div
-      className={`flex gap-1 rounded-lg border border-neutral-200 bg-neutral-50/50 p-1 ${className}`}
+      className={`flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--muted)]/60 p-1 ${className}`}
       role="tablist"
     >
       {children}
@@ -66,7 +66,9 @@ export function TabsTrigger({
       data-state={isActive ? "active" : "inactive"}
       onClick={() => ctx.setValue(value)}
       className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-        isActive ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-600 hover:text-neutral-900"
+        isActive
+          ? "bg-white text-[var(--primary)] shadow-sm"
+          : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
       } ${className}`}
     >
       {children}

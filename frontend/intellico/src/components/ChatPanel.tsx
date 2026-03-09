@@ -49,11 +49,13 @@ export function ChatPanel({ paperId }: { paperId: string }) {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto bg-[var(--background)] px-6 py-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <MessageSquare className="h-12 w-12 text-neutral-300" />
-            <p className="mt-4 text-sm text-neutral-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <MessageSquare className="h-6 w-6" />
+            </div>
+            <p className="mt-4 text-sm text-[var(--muted-foreground)]">
               Ask questions about this paper. Answers are grounded via RAG.
             </p>
           </div>
@@ -67,17 +69,17 @@ export function ChatPanel({ paperId }: { paperId: string }) {
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                   msg.role === "user"
-                    ? "bg-neutral-900 text-white"
-                    : "bg-neutral-100 text-neutral-900"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "bg-white text-[var(--foreground)] shadow-sm"
                 }`}
               >
                 <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                 {msg.role === "assistant" && msg.numChunks != null && (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-xs text-neutral-500">
+                    <summary className="cursor-pointer text-xs text-[var(--muted-foreground)]">
                       Sources
                     </summary>
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                       Grounded in uploaded paper via RAG ({msg.numChunks} chunks used)
                     </p>
                   </details>
@@ -87,16 +89,19 @@ export function ChatPanel({ paperId }: { paperId: string }) {
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2 rounded-2xl bg-neutral-100 px-4 py-3">
-                <Loader2 className="h-4 w-4 animate-spin text-neutral-500" />
-                <span className="text-sm text-neutral-500">Thinking…</span>
+              <div className="flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-sm">
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--primary)]" />
+                <span className="text-sm text-[var(--muted-foreground)]">Thinking…</span>
               </div>
             </div>
           )}
         </div>
         <div ref={bottomRef} />
       </div>
-      <form onSubmit={handleSubmit} className="border-t border-neutral-200 bg-white p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="border-t border-[var(--border)] bg-white/90 px-4 py-3 backdrop-blur"
+      >
         <div className="mx-auto flex max-w-2xl gap-2">
           <Input
             value={input}

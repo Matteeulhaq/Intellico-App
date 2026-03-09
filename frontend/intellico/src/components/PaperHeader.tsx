@@ -12,9 +12,9 @@ export function PaperHeader({ paper }: { paper: PaperRecord }) {
     .join(" · ");
 
   return (
-    <header className="border-b border-neutral-200 bg-white px-6 py-4">
-      <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-      {meta && <p className="mt-0.5 text-sm text-neutral-500">{meta}</p>}
+    <header className="border-b border-[var(--border)] bg-white/95 px-6 py-4 backdrop-blur">
+      <h2 className="text-lg font-semibold text-[var(--foreground)]">{title}</h2>
+      {meta && <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">{meta}</p>}
     </header>
   );
 }

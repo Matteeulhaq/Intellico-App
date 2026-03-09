@@ -52,8 +52,8 @@ export function FlowchartPanel({ paperId }: { paperId: string }) {
   if (loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <Loader2 className="h-10 w-10 animate-spin text-neutral-400" />
-        <p className="text-sm text-neutral-500">Generating flowchart…</p>
+        <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+        <p className="text-sm text-[var(--muted-foreground)]">Generating flowchart…</p>
       </div>
     );
   }
@@ -61,11 +61,11 @@ export function FlowchartPanel({ paperId }: { paperId: string }) {
   if (error) {
     const isMemory = /memory|oom|cuda|gpu/i.test(error);
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <AlertCircle className="h-12 w-12 text-amber-500" />
-        <p className="max-w-md text-center text-sm text-neutral-700">{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-[var(--background)] p-8">
+        <AlertCircle className="h-12 w-12 text-[var(--accent)]" />
+        <p className="max-w-md text-center text-sm text-[var(--foreground)]">{error}</p>
         {isMemory && (
-          <p className="max-w-md text-center text-xs text-neutral-500">
+          <p className="max-w-md text-center text-xs text-[var(--muted-foreground)]">
             Try a shorter paper or run again. The backend clears GPU memory between requests.
           </p>
         )}
@@ -79,7 +79,7 @@ export function FlowchartPanel({ paperId }: { paperId: string }) {
   if (!svgUrl) return null;
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden p-6">
+    <div className="flex flex-1 flex-col overflow-hidden bg-[var(--background)] p-6">
       <div className="mb-4 flex justify-end">
         <Button variant="outline" size="sm" className="gap-2" onClick={handleDownload}>
           <Download className="h-4 w-4" />

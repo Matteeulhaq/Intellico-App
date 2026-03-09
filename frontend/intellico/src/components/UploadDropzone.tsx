@@ -74,21 +74,23 @@ export function UploadDropzone({ onSuccess }: { onSuccess: () => void }) {
   );
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
       <div
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        className={`flex w-full max-w-md flex-col items-center justify-center rounded-2xl border-2 border-dashed p-12 transition-colors ${
-          drag ? "border-neutral-400 bg-neutral-50" : "border-neutral-200 bg-neutral-50/50"
+        className={`flex w-full max-w-xl flex-col items-center justify-center rounded-2xl border border-dashed bg-white/80 p-10 shadow-sm transition-colors ${
+          drag
+            ? "border-[var(--primary)] bg-[var(--muted)]"
+            : "border-[var(--border)] hover:border-[var(--primary)]"
         }`}
       >
         {uploading ? (
           <>
-            <Loader2 className="h-12 w-12 animate-spin text-neutral-400" />
-            <p className="mt-4 text-sm font-medium text-neutral-700">Processing…</p>
+            <Loader2 className="h-12 w-12 animate-spin text-[var(--primary)]" />
+            <p className="mt-4 text-sm font-medium text-[var(--foreground)]">Processing…</p>
             {file && (
-              <p className="mt-1 flex items-center gap-2 text-xs text-neutral-500">
+              <p className="mt-1 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                 <FileText className="h-3 w-3" />
                 {file.name} ({(file.size / 1024).toFixed(1)} KB)
               </p>
@@ -96,11 +98,15 @@ export function UploadDropzone({ onSuccess }: { onSuccess: () => void }) {
           </>
         ) : (
           <>
-            <Upload className="h-12 w-12 text-neutral-400" />
-            <p className="mt-4 text-sm font-medium text-neutral-700">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+              <Upload className="h-7 w-7" />
+            </div>
+            <p className="mt-4 text-sm font-semibold text-[var(--foreground)]">
               Drag & drop a PDF here, or click to browse
             </p>
-            <p className="mt-1 text-xs text-neutral-500">Research papers only</p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+              Intellico analyzes dental research papers securely on-device.
+            </p>
             <label className="mt-4 cursor-pointer">
               <input
                 type="file"
@@ -109,7 +115,7 @@ export function UploadDropzone({ onSuccess }: { onSuccess: () => void }) {
                 onChange={onFileChange}
                 disabled={uploading}
               />
-              <span className="inline-flex h-10 items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50">
+              <span className="inline-flex h-10 items-center justify-center rounded-lg border border-[var(--primary)]/20 bg-[var(--primary)]/5 px-4 text-sm font-medium text-[var(--primary)] hover:bg-[var(--primary)]/10">
                 Choose file
               </span>
             </label>

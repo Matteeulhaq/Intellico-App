@@ -24,7 +24,7 @@ export function KeywordPanel({ paper }: { paper: PaperRecord }) {
   }, [keywords, search]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
+    <div className="flex flex-1 flex-col gap-4 bg-[var(--background)] p-6">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
@@ -38,22 +38,22 @@ export function KeywordPanel({ paper }: { paper: PaperRecord }) {
       </div>
       {keywords.length === 0 ? (
         <Card className="p-8 text-center">
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-[var(--muted-foreground)]">
             No keywords extracted for this paper. Keywords come from upload metadata.
           </p>
-          <p className="mt-2 text-xs text-neutral-400">
+          <p className="mt-2 text-xs text-[var(--muted-foreground)]/80">
             Concept relationships are visualized in the Flowchart tab.
           </p>
         </Card>
       ) : (
         <>
           <Card>
-            <h4 className="mb-3 text-sm font-medium text-neutral-700">Keywords</h4>
+            <h4 className="mb-3 text-sm font-medium text-[var(--foreground)]">Keywords</h4>
             <ul className="flex flex-wrap gap-2">
               {filtered.map((k) => (
                 <li
                   key={k}
-                  className="rounded-md bg-neutral-100 px-3 py-1.5 text-sm text-neutral-800"
+                  className="rounded-md bg-[var(--secondary)] px-3 py-1.5 text-sm text-[var(--secondary-foreground)]"
                 >
                   {k}
                 </li>
@@ -61,8 +61,8 @@ export function KeywordPanel({ paper }: { paper: PaperRecord }) {
             </ul>
           </Card>
           <Card>
-            <h4 className="mb-3 text-sm font-medium text-neutral-700">Relationships</h4>
-            <p className="text-sm text-neutral-500">
+            <h4 className="mb-3 text-sm font-medium text-[var(--foreground)]">Relationships</h4>
+            <p className="text-sm text-[var(--muted-foreground)]">
               Concept relationships (A → B) are shown in the Flowchart tab. Open the Flowchart tab
               to view the visual diagram.
             </p>
