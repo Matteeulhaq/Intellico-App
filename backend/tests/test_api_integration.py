@@ -121,13 +121,13 @@ def test_summarize_endpoint(base_url: str, paper_id: str):
     print("\n" + "=" * 60)
     print("Testing Summarize Endpoint")
     print("=" * 60)
-    
+
     try:
         response = requests.get(
             f"{base_url}/api/summarize/{paper_id}",
             timeout=30
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             print(f"✓ Summarization successful")
@@ -137,6 +137,65 @@ def test_summarize_endpoint(base_url: str, paper_id: str):
             print(f"✗ Summarization failed: {response.status_code}")
             print(f"  Response: {response.text}")
             return False
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        return False
+
+def test_comprehensive_summarization_endpoint(base_url: str, paper_id: str):
+    """Test the enhanced comprehensive summarization endpoint"""
+    print("\n" + "=" * 60)
+    print("Testing Enhanced Comprehensive Summarization")
+    print("=" * 60)
+
+    try:
+        response = requests.get(
+            f"{base_url}/api/summarize/{paper_id}",
+            timeout=60  # Longer timeout for comprehensive summarization
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Verify response structure
+            assert 'summary' in data, "Response should contain 'summary' field"
+            assert 'section_summaries' in data, "Response should contain 'section_summaries' field"
+            assert 'key_findings' in data, "Response should contain 'key_findings' field"
+            assert 'metadata' in data, "Response should contain 'metadata' field"
+
+            # Verify quality improvements
+            summary = data.get('summary', '')
+            section_summaries = data.get('section_summaries', {})
+            key_findings = data.get('key_findings', {})
+            metadata = data.get('metadata', {})
+
+            # Summary should be much longer than old 2000 char limit
+            assert len(summary) > 500, f"Summary should be comprehensive (>500 chars), got {len(summary)} chars"
+
+            # Verify metadata
+            assert 'method' in metadata, "Metadata should contain 'method' field"
+            assert metadata['method'] == 'multi_stage_hierarchical', "Method should be 'multi_stage_hierarchical'"
+            assert 'sections_processed' in metadata, "Metadata should contain 'sections_processed' field"
+            assert metadata['sections_processed'] >= 3, f"Should process at least 3 sections, got {metadata['sections_processed']}"
+
+            print(f"✓ Enhanced comprehensive summary generated successfully")
+            print(f"  Summary length: {len(summary)} characters")
+            print(f"  Sections processed: {metadata['sections_processed']}")
+            print(f"  Method: {metadata['method']}")
+            print(f"  Key findings extracted: {len(key_findings)}")
+            print(f"  Section summaries: {len(section_summaries)}")
+
+            # Display sample of the comprehensive summary
+            print(f"\n  Comprehensive Summary Preview:")
+            print(f"  {summary[:300]}...")
+
+            return True
+        else:
+            print(f"✗ Enhanced summarization failed: {response.status_code}")
+            print(f"  Response: {response.text}")
+            return False
+    except AssertionError as e:
+        print(f"✗ Assertion failed: {e}")
+        return False
     except Exception as e:
         print(f"✗ Error: {e}")
         return False
@@ -170,6 +229,7 @@ def main():
         test_qa_endpoint(args.base_url, paper_id)
         test_flowchart_endpoint(args.base_url, paper_id)
         test_summarize_endpoint(args.base_url, paper_id)
+        test_comprehensive_summarization_endpoint(args.base_url, paper_id)
     
     print("\n" + "=" * 60)
     print("API Integration Tests Complete")

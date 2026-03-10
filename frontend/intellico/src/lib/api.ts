@@ -58,3 +58,35 @@ export async function getFlowchart(paperId: string): Promise<Blob> {
   }
   return res.blob();
 }
+
+export async function getPaperStatus(paperId: string): Promise<{
+  paper_id: string;
+  status: "processing" | "ready";
+  message: string;
+  chunks_count?: number;
+}> {
+  const res = await fetch(`${getBaseUrl()}/api/status/${paperId}`);
+  const data = await res.json();
+  if (!res.ok && res.status !== 202) throw new Error(data.error || "Status check failed");
+  return data;
+}
+
+export async function getPaper(paperId: string): Promise<{
+  paper_id: string;
+  filename?: string;
+  extracted_metadata?: {
+    title?: string;
+    authors?: string | string[];
+    abstract?: string;
+    keywords?: string | string[];
+    publication_date?: string;
+  };
+  metadata_extracted: boolean;
+  metadata_extracted_at?: string;
+  processing_error?: string;
+}> {
+  const res = await fetch(`${getBaseUrl()}/api/paper/${paperId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to fetch paper");
+  return data;
+}

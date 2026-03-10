@@ -176,27 +176,96 @@ class LocalModel:
         return generated_text
     
     def extract_metadata(self, text: str) -> Dict[str, Any]:
-        """Extract metadata from paper text"""
+        """
+        Extract metadata with comprehensive validation and error handling
+
+        Args:
+            text: Paper text to extract metadata from
+
+        Returns:
+            Dictionary with extracted metadata (title, authors, keywords, etc.)
+        """
+        import logging
         from .prompt_templates import PromptTemplates
-        
+
+        logger = logging.getLogger(__name__)
+
+        # Optimize: Only process first 2000 characters for metadata extraction
+        # Metadata (title, authors, etc.) is usually in the first few pages
+        if len(text) > 2000:
+            text = text[:2000] + "..."
+
+        logger.info(f"🤖 Extracting metadata from text (length: {len(text)})")
+        print(f"🤖 Extracting metadata from text (length: {len(text)})")
+
         prompt = PromptTemplates.metadata_extraction(text)
-        response = self.generate(prompt, max_new_tokens=256, temperature=0.3)
-        
-        # Try to parse JSON response
+
         try:
-            # Extract JSON from response if wrapped in text
-            if "{" in response and "}" in response:
-                json_start = response.find("{")
-                json_end = response.rfind("}") + 1
-                json_str = response[json_start:json_end]
-                metadata = json.loads(json_str)
-            else:
-                metadata = json.loads(response)
-        except:
-            # Fallback: return raw response
-            metadata = {"raw_response": response}
-        
-        return metadata
+            response = self.generate(prompt, max_new_tokens=512, temperature=0.3)
+
+            logger.info(f"📝 Model response length: {len(response)}")
+            print(f"📝 Model response length: {len(response)}")
+
+            # Try to parse JSON response
+            try:
+                # Extract JSON from response if wrapped in text
+                if "{" in response and "}" in response:
+                    json_start = response.find("{")
+                    json_end = response.rfind("}") + 1
+                    json_str = response[json_start:json_end]
+                    metadata = json.loads(json_str)
+                else:
+                    metadata = json.loads(response)
+
+                logger.info(f"✅ Successfully parsed metadata: {list(metadata.keys())}")
+                print(f"✅ Successfully parsed metadata: {list(metadata.keys())}")
+
+                # Validate required fields
+                if not metadata.get('keywords'):
+                    logger.warning("⚠️ No keywords found in extracted metadata")
+                    print("⚠️ No keywords found in extracted metadata")
+                    metadata['keywords'] = []
+
+                # Ensure keywords is a list
+                if isinstance(metadata.get('keywords'), str):
+                    metadata['keywords'] = [metadata['keywords']]
+                elif not isinstance(metadata.get('keywords'), list):
+                    metadata['keywords'] = []
+
+                # Log extracted keywords
+                if metadata.get('keywords'):
+                    logger.info(f"📝 Keywords extracted: {metadata['keywords'][:5]}")
+                    print(f"📝 Keywords extracted: {metadata['keywords'][:5]}")
+
+                return metadata
+
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse metadata JSON: {e}")
+                logger.error(f"Model response: {response[:500]}")
+                print(f"❌ Failed to parse metadata JSON: {e}")
+                print(f"Model response: {response[:500]}")
+
+                # Return minimal metadata
+                return {
+                    'keywords': [],
+                    'title': '',
+                    'authors': '',
+                    'abstract': '',
+                    'publication_date': ''
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Error in metadata extraction: {e}")
+            print(f"❌ Error in metadata extraction: {e}")
+
+            # Return minimal metadata on error
+            return {
+                'keywords': [],
+                'title': '',
+                'authors': '',
+                'abstract': '',
+                'publication_date': ''
+            }
     
     def classify_section(self, text: str) -> str:
         """Classify text section"""
