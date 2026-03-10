@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Card } from "@/components/ui/Card";
+import { getPaperStatus, getPaper } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import type { PaperRecord } from "@/types";
 
 function normalizeKeywords(meta: PaperRecord["metadata"]): string[] {
@@ -16,12 +18,44 @@ function normalizeKeywords(meta: PaperRecord["metadata"]): string[] {
 
 export function KeywordPanel({ paper }: { paper: PaperRecord }) {
   const [search, setSearch] = useState("");
+  const [processing, setProcessing] = useState(false);
   const keywords = useMemo(() => normalizeKeywords(paper.metadata), [paper.metadata]);
   const filtered = useMemo(() => {
     if (!search.trim()) return keywords;
     const q = search.toLowerCase();
     return keywords.filter((k) => k.toLowerCase().includes(q));
   }, [keywords, search]);
+
+  // Check if paper is still processing when keywords are empty
+  useEffect(() => {
+    if (keywords.length === 0) {
+      getPaperStatus(paper.paper_id)
+        .then(async (status) => {
+          const isProcessing = status.status === "processing";
+          setProcessing(isProcessing);
+
+          // FIX: If processing just completed, refresh metadata
+          if (!isProcessing) {
+            try {
+              const paperData = await getPaper(paper.paper_id);
+              if (paperData.extracted_metadata) {
+                // Get fresh reference to avoid dependency issues
+                const { updatePaperMetadata: refreshMetadata } = useStore.getState();
+                refreshMetadata(paper.paper_id, paperData);
+                console.log("Keywords refreshed:", paperData.extracted_metadata.keywords);
+              }
+            } catch (error) {
+              console.error("Failed to refresh metadata:", error);
+            }
+          }
+        })
+        .catch(() => {
+          setProcessing(false);
+        });
+    } else {
+      setProcessing(false);
+    }
+  }, [paper.paper_id, keywords.length]); // Removed updatePaperMetadata dependency
 
   return (
     <div className="flex flex-1 flex-col gap-4 bg-[var(--background)] p-6">

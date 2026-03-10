@@ -20,12 +20,13 @@ class PromptTemplates:
     def question_answering(question: str, context: Optional[str] = None) -> str:
         """Template for question answering with RAG context"""
         base_instruction = """
-You are a dental research assistant specialized ONLY in dentistry and oral health.
-- ONLY answer questions related to dentistry, oral health, dental research, or dental procedures
-- If a question is NOT about dentistry or if the context doesn't contain relevant dental information, respond with: "Sorry I cannot help you with that"
-- Do not provide medical advice for non-dental conditions
-- Provide a direct, concise answer based only on information explicitly stated in the context
-- Do not infer or speculate beyond the provided context
+You are a dental research assistant helping users understand DENTAL RESEARCH PAPERS.
+- Answer questions about the research paper provided in the context
+- The paper has been validated as being related to dentistry or oral health
+- Provide direct, concise answers based only on information in the context
+- For questions about study design, methodology, statistics, or results - answer based on the paper
+- If the question is completely unrelated to the paper or dentistry, respond with: "Sorry I cannot help you with that"
+- Do not provide medical advice beyond what's in the research paper
 """
 
         if context:
@@ -112,4 +113,56 @@ Focus on:
 - The conceptual evolution: which terms lead to which other terms
 """
         return PromptTemplates.format_instruction(instruction, text)
+
+    @staticmethod
+    def section_summarization(section_name: str, text: str) -> str:
+        """Template for summarizing a specific section"""
+        instruction = f"""
+You are a dental research assistant. Summarize the {section_name.upper()} section of this DENTAL RESEARCH PAPER.
+- Focus on key information specific to {section_name} section
+- ONLY summarize if the content is related to dentistry or oral health
+- If the content is not about dentistry, respond with: "Sorry I cannot help you with that"
+- Be concise but capture the main points (2-4 sentences)
+"""
+        return PromptTemplates.format_instruction(instruction, text)
+
+    @staticmethod
+    def comprehensive_synthesis(section_summaries: dict, key_findings: dict) -> str:
+        """Template for synthesizing comprehensive summary"""
+        instruction = """
+You are a dental research assistant. Create a comprehensive summary of a DENTAL RESEARCH PAPER by synthesizing the following section summaries and key findings.
+
+Your summary should include:
+1. **Study Overview**: Brief description of the research purpose and approach (2-3 sentences)
+2. **Methodology**: Key methods and study design (2-3 sentences)
+3. **Main Findings**: Primary results and statistical outcomes (3-4 sentences)
+4. **Clinical Implications**: Practical significance for dental practice (2-3 sentences)
+5. **Conclusions**: Main conclusions and future directions (2-3 sentences)
+
+- ONLY summarize if the content is related to dentistry or oral health
+- If the content is not about dentistry, respond with: "Sorry I cannot help you with that"
+- Be concise but comprehensive
+- Use clear, professional language suitable for dental professionals
+"""
+
+        # Format section summaries
+        sections_text = "\n\n".join([
+            f"## {section.title()}\n{summary}"
+            for section, summary in section_summaries.items()
+        ])
+
+        # Format key findings
+        findings_text = "\n\n".join([
+            f"## {query.replace('_', ' ').title()}\n{finding}"
+            for query, finding in key_findings.items()
+        ])
+
+        combined_context = f"""SECTION SUMMARIES:
+{sections_text}
+
+KEY FINDINGS:
+{findings_text}
+"""
+
+        return PromptTemplates.format_instruction(instruction, combined_context)
 

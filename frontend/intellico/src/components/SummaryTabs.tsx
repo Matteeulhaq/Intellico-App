@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
-import { getSummary } from "@/lib/api";
+import { getSummary, getPaperStatus } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
@@ -17,22 +17,45 @@ function truncateBySentences(text: string, count: number): string {
 export function SummaryTabs({ paperId }: { paperId: string }) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getSummary(paperId)
-      .then((res) => {
+
+    const loadSummary = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // First check if paper is ready
+        const status = await getPaperStatus(paperId);
+
+        if (status.status === "processing") {
+          // Paper is still processing, show processing state
+          if (!cancelled) {
+            setProcessing(true);
+            setError("Paper is still being processed. Please wait...");
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Paper is ready, fetch summary
+        setProcessing(false);
+        const res = await getSummary(paperId);
         if (!cancelled) setSummary(res.summary);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load summary");
-      })
-      .finally(() => {
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load summary");
+          setProcessing(false);
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+
+    loadSummary();
     return () => { cancelled = true; };
   }, [paperId]);
 
@@ -41,6 +64,16 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
     navigator.clipboard.writeText(summary);
     toast.success("Summary copied to clipboard.");
   };
+
+  if (processing) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-neutral-400" />
+        <p className="text-sm text-neutral-600">Paper is still being processed...</p>
+        <p className="text-xs text-neutral-500">This typically takes 1-2 minutes after upload.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

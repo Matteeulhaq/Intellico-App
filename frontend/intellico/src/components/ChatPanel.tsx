@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Send, Loader2, MessageSquare } from "lucide-react";
 import { askQuestion } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +13,12 @@ import { toast } from "sonner";
 export function ChatPanel({ paperId }: { paperId: string }) {
   const getPaper = useStore((s) => s.getPaper);
   const addChatMessage = useStore((s) => s.addChatMessage);
-  const paper = getPaper(paperId);
+
+  // Use useMemo to stabilize paper object reference
+  const paper = useMemo(
+    () => getPaper(paperId),
+    [paperId, getPaper]
+  );
 
   const [messages, setMessages] = useState<ChatMessage[]>(paper?.chatHistory || []);
   const [input, setInput] = useState("");
@@ -23,7 +28,7 @@ export function ChatPanel({ paperId }: { paperId: string }) {
   // Load chat history from store when paperId changes
   useEffect(() => {
     setMessages(paper?.chatHistory || []);
-  }, [paperId, paper]);
+  }, [paperId]); // Only depend on paperId, not paper object
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

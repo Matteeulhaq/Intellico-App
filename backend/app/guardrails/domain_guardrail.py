@@ -77,7 +77,7 @@ class DentistryGuardrail:
 
         Args:
             text: Input text to check
-            context: Optional context (e.g., paper content)
+            context: Optional context (e.g., paper content) - if provided and is dental, allow the question
 
         Returns:
             Tuple of (is_allowed, rejection_reason)
@@ -90,27 +90,48 @@ class DentistryGuardrail:
         text_lower = text.lower()
 
         # Check for strong non-dental indicators (immediate rejection)
+        # But allow research methodology terms even if they overlap with non-dental keywords
         non_dental_matches = self.non_dental_pattern.findall(text_lower)
-        if non_dental_matches and self.strict_mode:
+
+        # Research methodology terms that should be allowed even with non-dental keywords
+        research_methodology_terms = [
+            'sample', 'sample size', 'statistical', 'method', 'methods', 'methodology',
+            'study design', 'results', 'findings', 'outcomes', 'follow-up', 'follow up',
+            'conclusion', 'abstract', 'introduction', 'discussion', 'analysis'
+        ]
+
+        # Check if question is about research methodology (allow these)
+        is_research_question = any(term in text_lower for term in research_methodology_terms)
+
+        # If context is provided and is dental-related, allow research questions
+        if context and is_research_question:
+            context_dental_matches = self.dental_pattern.findall(context.lower())
+            if context_dental_matches:
+                # Paper content is dental, and question is about research methodology
+                logger.info(f"Allowed research question about dental paper: {text[:100]}")
+                return True, None
+
+        # Block non-dental questions (unless they're research questions about dental papers)
+        if non_dental_matches and self.strict_mode and not is_research_question:
             logger.info(f"Rejected non-dental query: {non_dental_matches}")
             return False, self.REJECTION_MESSAGE
 
-        # Check for dental indicators
-        dental_matches = self.dental_pattern.findall(text_lower)
-
-        # If context is provided (e.g., from paper), also check context
+        # If context is provided and is dental-related, allow other questions too
         if context:
             context_dental_matches = self.dental_pattern.findall(context.lower())
-            # If paper content is dental, allow the question
             if context_dental_matches:
+                # Paper content is dental, so allow questions about it
+                logger.info(f"Allowed question about dental paper: {text[:100]}")
                 return True, None
 
-        # Decision logic
+        # Check for dental indicators in the question itself
+        dental_matches = self.dental_pattern.findall(text_lower)
         if dental_matches:
-            # Has dental keywords - allow
             return True, None
-        elif len(text.split()) < 5 and not dental_matches:
-            # Very short query without dental keywords - likely non-dental
+
+        # For questions without clear dental keywords AND no dental context
+        if len(text.split()) < 5 and not dental_matches:
+            # Very short query without dental keywords
             if self.strict_mode:
                 return False, self.REJECTION_MESSAGE
             else:
@@ -120,7 +141,6 @@ class DentistryGuardrail:
             if self.strict_mode:
                 return False, self.REJECTION_MESSAGE
             else:
-                # In non-strict mode, allow but log
                 logger.warning(f"Ambiguous query allowed (non-strict mode): {text[:100]}")
                 return True, None
 
