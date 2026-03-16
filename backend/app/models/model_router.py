@@ -35,55 +35,42 @@ class ModelRouter:
     def answer_question(self, question: str, context: Optional[str] = None) -> str:
         """Answer question using model with optional RAG context"""
         from .prompt_templates import PromptTemplates
-        
+
         prompt = PromptTemplates.question_answering(question, context)
         response = self.model.generate(prompt, max_new_tokens=512, temperature=0.7)
-        
-        # Clear GPU cache periodically
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         return response.strip()
     
     def summarize(self, text: str) -> str:
         """Summarize text"""
         from .prompt_templates import PromptTemplates
-        
+
         # Limit text length
         if len(text) > 2000:
             text = text[:2000] + "..."
-        
+
         prompt = PromptTemplates.summarization(text)
         response = self.model.generate(prompt, max_new_tokens=256, temperature=0.5)
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         return response.strip()
     
     def extract_metadata(self, text: str) -> dict:
         """Extract metadata from text"""
         result = self.model.extract_metadata(text)
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         return result
     
     def extract_methodology(self, text: str) -> list:
         """Extract methodology steps from text"""
         from .prompt_templates import PromptTemplates
-        
+
         # Limit text length
         if len(text) > 3000:
             text = text[:3000] + "..."
-        
+
         prompt = PromptTemplates.methodology_extraction(text)
         response = self.model.generate(prompt, max_new_tokens=512, temperature=0.3)
-        
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        
+
         # Parse steps (one per line)
         steps = [step.strip() for step in response.split('\n') if step.strip()]
         return steps
@@ -99,10 +86,6 @@ class ModelRouter:
         prompt = PromptTemplates.keyword_relationship_extraction(text)
         response = self.model.generate(prompt, max_new_tokens=1024, temperature=0.3)
 
-        # Clear GPU cache after processing
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
         return response
 
     def summarize_section(self, section_name: str, section_text: str) -> str:
@@ -115,10 +98,6 @@ class ModelRouter:
 
         prompt = PromptTemplates.section_summarization(section_name, section_text)
         response = self.model.generate(prompt, max_new_tokens=300, temperature=0.3)
-
-        # Reuse existing GPU cache pattern
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
 
         return response.strip()
 
@@ -190,9 +169,6 @@ class ModelRouter:
             max_new_tokens=1500,
             temperature=0.4
         )
-
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
 
         return response.strip()
 
