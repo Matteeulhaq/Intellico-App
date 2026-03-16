@@ -4,7 +4,6 @@ Extract keywords/terminologies and their relationships using fine-tuned model
 from typing import List, Dict, Tuple
 import json
 import re
-import torch
 from ..models.model_router import ModelRouter
 
 class KeywordRelationshipExtractor:
@@ -42,26 +41,19 @@ class KeywordRelationshipExtractor:
                         combined_text.append(sections[section])
                 if combined_text:
                     text_to_use = '\n\n'.join(combined_text)
-            
+
             # Limit text length to prevent OOM
             if len(text_to_use) > self.max_text_length:
                 text_to_use = text_to_use[:self.max_text_length] + "..."
-            
+
             # Extract keywords and relationships using model
             result = self.model_router.extract_keyword_relationships(text_to_use)
-            
+
             # Parse result
             keywords, relationships = self._parse_relationships(result)
-            
-            # Clear GPU cache after processing
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            
+
             return keywords, relationships
         except Exception as e:
-            # Clear GPU cache on error
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
             raise e
     
     def _parse_relationships(self, model_output: str) -> Tuple[List[str], List[Tuple[str, str]]]:

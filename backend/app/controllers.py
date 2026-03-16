@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app, send_file, Response, stream_with_context
 import os
 import uuid
 from io import BytesIO
@@ -226,78 +226,115 @@ def register_routes(app):
     
     @api.route("/flowchart/<paper_id>", methods=["GET"])
     def flowchart(paper_id):
-        """Generate flowchart for a paper (with caching)"""
+        """Generate flowchart for a paper with streaming progress updates"""
         import time
+        import base64
         import torch
+        from .utils.streaming import StreamingContext
 
-        try:
-            # CACHE CHECK: Try to retrieve cached flowchart first
-            cached_flowchart = paper_analyzer.vector_store.get_flowchart(paper_id)
+        # CACHE CHECK: Try to retrieve cached flowchart first
+        cached_flowchart = paper_analyzer.vector_store.get_flowchart(paper_id)
 
-            if cached_flowchart:
-                # Return cached SVG
-                return send_file(
-                    BytesIO(cached_flowchart['svg_data']),
-                    mimetype='image/svg+xml',
-                    as_attachment=False,
-                    download_name=f'{paper_id}_flowchart.svg'
-                )
-
-            # CACHE MISS: Generate new flowchart
-            start_time = time.time()
-
-            # LAYER 1: Validate paper is dental-related before processing
-            chunks = paper_analyzer.vector_store.get_paper_chunks(paper_id)
-            if not chunks:
-                return jsonify({"error": "paper not found"}), 404
-
-            first_chunk_text = chunks[0].get('text', '')
-            is_allowed, rejection_reason = domain_guardrail.check_input(first_chunk_text)
-            if not is_allowed:
-                return jsonify({
-                    "error": "Flowcharts can only be generated for dentistry-related papers",
-                    "blocked": True
-                }), 400
-
-            # Clear GPU cache before generation
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-
-            # Generate flowchart image
-            flowchart_image = paper_analyzer.generate_flowchart(paper_id)
-
-            # Clear GPU cache after generation
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-
-            # Calculate processing time
-            processing_time = int((time.time() - start_time) * 1000)
-
-            # CACHE STORAGE: Store the generated flowchart
-            paper_analyzer.vector_store.store_flowchart(
-                paper_id,
-                flowchart_image,
-                '',  # mermaid_code - not currently extracted
-                {
-                    'keywords_extracted': 0,  # Can be enhanced later
-                    'relationships_extracted': 0,  # Can be enhanced later
-                    'processing_time_ms': processing_time
-                }
-            )
-
-            # Return as SVG
+        if cached_flowchart:
+            # Return cached SVG as-is for backward compatibility
             return send_file(
-                BytesIO(flowchart_image),
+                BytesIO(cached_flowchart['svg_data']),
                 mimetype='image/svg+xml',
                 as_attachment=False,
                 download_name=f'{paper_id}_flowchart.svg'
             )
 
-        except Exception as e:
-            # Clear GPU cache on error
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            return jsonify({"error": str(e)}), 500
+        # CACHE MISS: Return streaming response
+        def generate_flowchart_stream():
+            context = StreamingContext()
+            start_time = time.time()
+
+            try:
+                # Validate
+                context.emit_progress("validation", "Validating paper...", 10)
+                chunks = paper_analyzer.vector_store.get_paper_chunks(paper_id)
+                if not chunks:
+                    context.emit_error("Paper not found")
+                    return
+
+                # LAYER 1: Validate paper is dental-related before processing
+                first_chunk_text = chunks[0].get('text', '')
+                is_allowed, rejection_reason = domain_guardrail.check_input(first_chunk_text)
+                if not is_allowed:
+                    context.emit_error("Flowcharts can only be generated for dentistry-related papers")
+                    return
+
+                # Reconstruct text
+                context.emit_progress("preparation", "Preparing text...", 20)
+                full_text_parts = [chunk.get('text', '') for chunk in chunks]
+                full_text = "\n\n".join(full_text_parts)
+
+                # Extract keywords and relationships
+                context.emit_progress("extraction", "Extracting keyword relationships...", 40)
+                from .flowchart.keyword_relationship_extractor import KeywordRelationshipExtractor
+                extractor = KeywordRelationshipExtractor(paper_analyzer.model_router)
+
+                # Limit text length
+                if len(full_text) > 4000:
+                    full_text = full_text[:4000] + "..."
+
+                result = paper_analyzer.model_router.extract_keyword_relationships(full_text)
+                keywords, relationships = extractor._parse_relationships(result)
+
+                # Build concept flow
+                context.emit_progress("building", "Building concept flow...", 70)
+                concept_flow = extractor.build_concept_flow(keywords, relationships)
+
+                # Render diagram
+                context.emit_progress("rendering", "Rendering diagram...", 85)
+                from .flowchart.mermaid_renderer import MermaidRenderer
+                renderer = MermaidRenderer(use_api=True)
+                mermaid_code = renderer.keywords_to_mermaid(concept_flow, relationships)
+                svg_data = renderer.render(mermaid_code, "svg")
+
+                # Calculate processing time
+                processing_time = int((time.time() - start_time) * 1000)
+
+                # CACHE STORAGE: Store the generated flowchart
+                paper_analyzer.vector_store.store_flowchart(
+                    paper_id,
+                    svg_data,
+                    mermaid_code,
+                    {
+                        'keywords_extracted': len(keywords),
+                        'relationships_extracted': len(relationships),
+                        'processing_time_ms': processing_time
+                    }
+                )
+
+                # Return as base64 encoded SVG in JSON
+                context.emit_complete({
+                    "svg": base64.b64encode(svg_data).decode(),
+                    "mermaid_code": mermaid_code,
+                    "metadata": {
+                        "keywords_extracted": len(keywords),
+                        "relationships_extracted": len(relationships),
+                        "processing_time_ms": processing_time,
+                        "cache_hit": False
+                    }
+                })
+
+            except Exception as e:
+                context.emit_error(str(e))
+
+            # Yield all events
+            for event in context.generator():
+                yield event
+
+        return Response(
+            stream_with_context(generate_flowchart_stream()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no'
+            }
+        )
     
     @api.route("/qa/<paper_id>", methods=["POST"])
     def qa(paper_id):
@@ -381,141 +418,140 @@ def register_routes(app):
     
     @api.route("/summarize/<paper_id>", methods=["GET"])
     def summarize(paper_id):
-        """Get comprehensive summary of a paper (with caching and parallel processing)"""
+        """Get comprehensive summary with streaming progress updates"""
         import time
         from concurrent.futures import ThreadPoolExecutor, as_completed
+        from .utils.streaming import StreamingContext
 
-        try:
-            # CACHE CHECK: Try to retrieve cached summary first
-            cached_summary = paper_analyzer.vector_store.get_summary(paper_id)
-
-            if cached_summary:
-                return jsonify({
-                    "paper_id": paper_id,
-                    "summary": cached_summary['summary'],
-                    "section_summaries": cached_summary['section_summaries'],
-                    "key_findings": cached_summary['key_findings'],
-                    "metadata": {
-                        **cached_summary['metadata'],
-                        "cache_hit": True,
-                        "times_accessed": cached_summary['cache_stats']['times_accessed']
-                    }
-                }), 200
-
-            # CACHE MISS: Generate new summary
-            start_time = time.time()
-
-            # Get paper chunks (reuse existing pattern)
-            chunks = paper_analyzer.vector_store.get_paper_chunks(paper_id)
-
-            if not chunks:
-                return jsonify({"error": "paper not found"}), 404
-
-            # LAYER 1: Validate paper is dental
-            first_chunk_text = chunks[0].get('text', '')
-            is_allowed, _ = domain_guardrail.check_input(first_chunk_text)
-            if not is_allowed:
-                return jsonify({
-                    "error": "This paper does not appear to be related to dentistry",
-                    "blocked": True
-                }), 400
-
-            # STAGE 1: Group chunks by section
-            sections = {}
-            for chunk in chunks:
-                section = chunk.get('section', '').lower()
-                # Normalize section names
-                if section not in ['abstract', 'introduction', 'methodology', 'results', 'discussion', 'conclusion']:
-                    section = 'other'
-                if section not in sections:
-                    sections[section] = []
-                sections[section].append(chunk.get('text', ''))
-
-            # Combine chunks within each section
-            section_texts = {}
-            for section, text_parts in sections.items():
-                combined = '\n\n'.join(text_parts)
-                # Limit to prevent OOM (same pattern as existing methods)
-                if len(combined) > 3000:
-                    combined = combined[:3000] + "..."
-                section_texts[section] = combined
-
-            # STAGE 2: Summarize sections in PARALLEL (3x faster)
-            section_summaries = {}
-            priority_sections = ['abstract', 'introduction', 'methodology', 'results', 'discussion', 'conclusion']
-
-            def summarize_section(section_name):
-                """Helper function for parallel processing"""
-                if section_name in section_texts:
-                    return section_name, paper_analyzer.model_router.summarize_section(
-                        section_name,
-                        section_texts[section_name]
-                    )
-                return None
-
-            # Use ThreadPoolExecutor for parallel section summarization
-            with ThreadPoolExecutor(max_workers=3) as executor:
-                # Submit all section summarization tasks
-                future_to_section = {
-                    executor.submit(summarize_section, section): section
-                    for section in priority_sections
-                }
-
-                # Collect results as they complete
-                for future in as_completed(future_to_section):
-                    result = future.result()
-                    if result:
-                        section_name, summary = result
-                        section_summaries[section_name] = summary
-
-            # STAGE 3: Extract key findings using RAG
-            key_findings = paper_analyzer.model_router.extract_key_findings(
-                paper_id,
-                paper_analyzer.rag_chain
-            )
-
-            # STAGE 4: Generate comprehensive summary
-            comprehensive_summary = paper_analyzer.model_router.generate_comprehensive_summary(
-                section_summaries,
-                key_findings
-            )
-
-            # LAYER 3: Validate summary is dental-related
-            is_valid, final_summary = domain_guardrail.check_response(comprehensive_summary)
-            if not is_valid:
-                final_summary = "Sorry, this summary could not be generated as the content is not related to dentistry."
-
-            # Calculate processing time
-            processing_time = int((time.time() - start_time) * 1000)
-
-            # Prepare summary data
-            summary_data = {
-                "paper_id": paper_id,
-                "summary": final_summary,
-                "section_summaries": section_summaries,
-                "key_findings": key_findings,
-                "metadata": {
-                    "total_chunks": len(chunks),
-                    "sections_processed": len(section_summaries),
-                    "method": "multi_stage_hierarchical",
-                    "generated_at": time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime()),
-                    "processing_time_ms": processing_time
-                }
-            }
-
-            # CACHE STORAGE: Store the generated summary
-            paper_analyzer.vector_store.store_summary(paper_id, summary_data)
-
+        # CACHE CHECK: Return immediately if cached
+        cached_summary = paper_analyzer.vector_store.get_summary(paper_id)
+        if cached_summary:
             return jsonify({
-                **summary_data,
+                "paper_id": paper_id,
+                "summary": cached_summary['summary'],
+                "section_summaries": cached_summary['section_summaries'],
+                "key_findings": cached_summary['key_findings'],
                 "metadata": {
-                    **summary_data["metadata"],
-                    "cache_hit": False
+                    **cached_summary['metadata'],
+                    "cache_hit": True,
+                    "times_accessed": cached_summary['cache_stats']['times_accessed']
                 }
             }), 200
 
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        # CACHE MISS: Return streaming response
+        def generate_summary_stream():
+            context = StreamingContext()
+            start_time = time.time()
+
+            try:
+                # Validate
+                context.emit_progress("validation", "Validating paper...", 5)
+                chunks = paper_analyzer.vector_store.get_paper_chunks(paper_id)
+                if not chunks:
+                    context.emit_error("Paper not found")
+                    return
+
+                # LAYER 1: Validate paper is dental
+                first_chunk_text = chunks[0].get('text', '')
+                is_allowed, _ = domain_guardrail.check_input(first_chunk_text)
+                if not is_allowed:
+                    context.emit_error("This paper does not appear to be related to dentistry")
+                    return
+
+                # STAGE 1: Group chunks by section
+                context.emit_progress("preparation", "Preparing sections...", 10)
+                sections = {}
+                for chunk in chunks:
+                    section = chunk.get('section', '').lower()
+                    # Normalize section names
+                    if section not in ['abstract', 'introduction', 'methodology', 'results', 'discussion', 'conclusion']:
+                        section = 'other'
+                    if section not in sections:
+                        sections[section] = []
+                    sections[section].append(chunk.get('text', ''))
+
+                # Combine chunks within each section
+                section_texts = {}
+                for section, text_parts in sections.items():
+                    combined = '\n\n'.join(text_parts)
+                    # Limit to prevent OOM (same pattern as existing methods)
+                    if len(combined) > 3000:
+                        combined = combined[:3000] + "..."
+                    section_texts[section] = combined
+
+                # STAGE 2: Summarize sections with progress updates
+                section_summaries = {}
+                priority_sections = ['abstract', 'introduction', 'methodology', 'results', 'discussion', 'conclusion']
+
+                for i, section in enumerate(priority_sections):
+                    if section in section_texts:
+                        context.emit_progress("sections", f"Summarizing {section}...", 15 + i * 5)
+                        summary = paper_analyzer.model_router.summarize_section(
+                            section,
+                            section_texts[section]
+                        )
+                        section_summaries[section] = summary
+
+                # STAGE 3: Extract key findings using RAG
+                context.emit_progress("findings", "Extracting key findings...", 50)
+                key_findings = paper_analyzer.model_router.extract_key_findings(
+                    paper_id,
+                    paper_analyzer.rag_chain
+                )
+
+                # STAGE 4: Generate comprehensive summary
+                context.emit_progress("synthesis", "Generating comprehensive summary...", 75)
+                comprehensive_summary = paper_analyzer.model_router.generate_comprehensive_summary(
+                    section_summaries,
+                    key_findings
+                )
+
+                # LAYER 3: Validate summary is dental-related
+                is_valid, final_summary = domain_guardrail.check_response(comprehensive_summary)
+                if not is_valid:
+                    final_summary = "Sorry, this summary could not be generated as the content is not related to dentistry."
+
+                # Calculate processing time
+                processing_time = int((time.time() - start_time) * 1000)
+
+                # Prepare summary data
+                summary_data = {
+                    "paper_id": paper_id,
+                    "summary": final_summary,
+                    "section_summaries": section_summaries,
+                    "key_findings": key_findings,
+                    "metadata": {
+                        "total_chunks": len(chunks),
+                        "sections_processed": len(section_summaries),
+                        "method": "multi_stage_hierarchical",
+                        "generated_at": time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime()),
+                        "processing_time_ms": processing_time,
+                        "cache_hit": False
+                    }
+                }
+
+                # CACHE STORAGE: Store the generated summary
+                paper_analyzer.vector_store.store_summary(paper_id, summary_data)
+
+                # Send completion
+                context.emit_complete(summary_data)
+
+            except Exception as e:
+                context.emit_error(str(e))
+
+            # Yield all events
+            for event in context.generator():
+                yield event
+
+        return Response(
+            stream_with_context(generate_summary_stream()),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no'
+            }
+        )
 
     @api.route("/cache/stats", methods=["GET"])
     def cache_stats():
