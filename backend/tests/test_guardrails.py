@@ -159,6 +159,55 @@ class TestDentistryGuardrail(unittest.TestCase):
             is_allowed, reason = self.guardrail.check_input(question)
             self.assertTrue(is_allowed, f"Should allow technology in dental context: {question}")
 
+    def test_context_aware_guardrail_allows_research_questions(self):
+        """Test that guardrail allows legitimate research questions when context is dental"""
+        dental_context = "This study examined the effectiveness of fluoride treatments in preventing dental caries in children."
+
+        # Research methodology questions (should be allowed with dental context)
+        methodology_questions = [
+            "What was the sample size?",
+            "What statistical methods did they use?",
+            "What were the primary outcomes?",
+            "How long was the follow-up period?",
+            "Describe the methodology",
+            "What were the main results?",
+            "What was the study design?"
+        ]
+
+        for question in methodology_questions:
+            is_allowed, _ = self.guardrail.check_input(question, context=dental_context)
+            self.assertTrue(is_allowed, f"Should allow research question with dental context: {question}")
+
+    def test_guardrail_blocks_non_dental_topics_even_with_context(self):
+        """Test that guardrail still blocks clearly non-dental topics even with dental context"""
+        dental_context = "This study examined the effectiveness of fluoride treatments in preventing dental caries in children."
+
+        # Use questions that contain actual non-dental keywords from the NON_DENTAL_KEYWORDS list
+        non_dental_questions = [
+            "How do I learn programming?",  # Contains "programming"
+            "What's the recipe for chocolate cake?",  # Contains "recipe" and "cooking"
+            "Should I invest in cryptocurrency?",  # Contains "cryptocurrency" (variant of "cryptocurrency")
+            "How do I build a mobile app?",  # Contains "mobile app"
+            "Explain machine learning algorithms",  # Contains "machine learning" and "algorithm"
+            "How does web development work?",  # Contains "web development"
+        ]
+
+        for question in non_dental_questions:
+            is_allowed, _ = self.guardrail.check_input(question, context=dental_context)
+            self.assertFalse(is_allowed, f"Should block non-dental question even with dental context: {question}")
+
+    def test_guardrail_allows_explicit_dental_questions(self):
+        """Test that guardrail allows explicit dental questions without context"""
+        dental_questions = [
+            "What is the best treatment for gingivitis?",
+            "How do dental implants work?",
+            "What are the symptoms of periodontal disease?"
+        ]
+
+        for question in dental_questions:
+            is_allowed, _ = self.guardrail.check_input(question)
+            self.assertTrue(is_allowed, f"Should allow explicit dental question: {question}")
+
 class TestGuardrailIntegration(unittest.TestCase):
     """Test guardrail integration scenarios"""
 

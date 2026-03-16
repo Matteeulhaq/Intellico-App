@@ -42,20 +42,28 @@ class Embedder:
     
     def embed_chunks(self, chunks: List[dict]) -> List[dict]:
         """
-        Generate embeddings for a list of text chunks
-        
+        Generate embeddings for a list of text chunks (optimized batch processing)
+
         Args:
             chunks: List of chunk dictionaries with 'text' key
-            
+
         Returns:
             List of chunks with added 'embedding' key
         """
         texts = [chunk['text'] for chunk in chunks]
-        embeddings = self.embed_text(texts)
-        
+
+        # Batch processing with optimized settings
+        embeddings = self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            show_progress_bar=True,
+            batch_size=8,  # Process 8 chunks at a time for better GPU utilization
+            device='cuda' if self.model.device.type == 'cuda' else 'cpu'
+        )
+
         # Add embeddings to chunks
         for i, chunk in enumerate(chunks):
             chunk['embedding'] = embeddings[i].tolist()
-        
+
         return chunks
 
