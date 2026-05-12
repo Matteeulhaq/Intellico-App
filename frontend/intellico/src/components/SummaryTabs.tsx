@@ -120,7 +120,7 @@ export function SummaryTabs({ paperId }: { paperId: string }) {
             </TabsTrigger>
             <TabsTrigger value="detailed">Detailed</TabsTrigger>
           </TabsList>
-          <div className="mt-4">
+          <div className="mt-4 overflow-y-auto max-h-[calc(100vh-16rem)]">
             <TabsContent value="short">
               <Card className="prose prose-sm max-w-none">
                 <p className="whitespace-pre-wrap text-neutral-700">{cleanMarkdown(short)}</p>
